@@ -8,7 +8,8 @@ Plain JavaScript, no external dependencies.
 2. Copy buttons
 3. Anchor navigation
 4. IPv4 helpers
-5. IPv4 subnet calculator
+5. Live IPv4 subnet calculator
+5B. Active sticky subnav
 6. VLSM calculator
 
 ADDING COMMANDS:
@@ -64,10 +65,6 @@ function filterCommands() {
 
     section.hidden = query !== '' && visible === 0;
 
-    /*
-      Keep tool-section headings visible because tables/calculators
-      are not represented by command cards.
-    */
     if (!section.classList.contains('tool-section')) {
       section.querySelectorAll('h3').forEach(heading => {
         let sibling = heading.nextElementSibling;
@@ -103,10 +100,6 @@ function filterCommands() {
 
 searchInput?.addEventListener('input', filterCommands);
 
-/*
-  "/" focuses the NECS search field.
-  Escape clears the current search.
-*/
 document.addEventListener('keydown', event => {
   const target = event.target;
 
@@ -174,10 +167,6 @@ document.querySelectorAll('.copy-btn').forEach(button => {
 
 document.querySelectorAll('a[href^="#"]').forEach(link => {
   link.addEventListener('click', () => {
-    /*
-      If a search is active, clear it before navigating.
-      Otherwise the target section could currently be hidden.
-    */
     if (searchInput?.value) {
       searchInput.value = '';
 
@@ -191,10 +180,6 @@ document.querySelectorAll('a[href^="#"]').forEach(link => {
    4. IPv4 HELPERS
    ========================================================================= */
 
-/*
-  Convert "192.168.1.1" into:
-  [192, 168, 1, 1]
-*/
 function parseIPv4(ip) {
   const parts = String(ip).trim().split('.');
 
@@ -223,10 +208,6 @@ function parseIPv4(ip) {
   });
 }
 
-
-/*
-  Convert IPv4 octets into one unsigned 32-bit number.
-*/
 function octetsToUint32(parts) {
   return (
     ((parts[0] << 24) >>> 0) +
@@ -236,10 +217,6 @@ function octetsToUint32(parts) {
   ) >>> 0;
 }
 
-
-/*
-  Convert unsigned 32-bit number back into dotted IPv4.
-*/
 function uint32ToIPv4(value) {
   value >>>= 0;
 
@@ -251,13 +228,6 @@ function uint32ToIPv4(value) {
   ].join('.');
 }
 
-
-/*
-  Convert prefix length to 32-bit subnet mask.
-
-  Example:
-  /24 -> 255.255.255.0
-*/
 function prefixToMask(prefix) {
   if (prefix === 0) {
     return 0 >>> 0;
@@ -268,16 +238,6 @@ function prefixToMask(prefix) {
   ) >>> 0;
 }
 
-
-/*
-  Accept either:
-    /24
-    24
-    255.255.255.0
-
-  and return:
-    24
-*/
 function maskToPrefix(maskText) {
   const value = String(maskText).trim();
 
@@ -331,10 +291,6 @@ function maskToPrefix(maskText) {
     : 32;
 }
 
-
-/*
-  Basic IPv4 classification for quick reference.
-*/
 function classifyIPv4(ipUint) {
   const a =
     (ipUint >>> 24) & 255;
@@ -402,10 +358,6 @@ function classifyIPv4(ipUint) {
   return 'Public or other special-use';
 }
 
-
-/*
-  Convenience helper for calculator output.
-*/
 function setResult(id, value) {
   const element =
     document.getElementById(id);
@@ -417,25 +369,108 @@ function setResult(id, value) {
 
 
 /* =========================================================================
-   5. SUBNET CALCULATOR
+   5. LIVE IPv4 SUBNET CALCULATOR
    ========================================================================= */
+
+function ipv4Class(ipUint) {
+  const first = (ipUint >>> 24) & 255;
+
+  if (first >= 1 && first <= 126) return 'A';
+  if (first >= 128 && first <= 191) return 'B';
+  if (first >= 192 && first <= 223) return 'C';
+  if (first >= 224 && first <= 239) return 'D (multicast)';
+  if (first >= 240) return 'E / reserved';
+
+  return 'Special';
+}
+
+function clampPrefix(value) {
+  const number = Number(value);
+
+  if (!Number.isFinite(number)) {
+    return 24;
+  }
+
+  return Math.max(
+    0,
+    Math.min(
+      32,
+      Math.round(number)
+    )
+  );
+}
+
+function updatePrefixUI(prefix) {
+  const prefixInput =
+    document.getElementById('calc-prefix');
+
+  const slider =
+    document.getElementById('calc-prefix-slider');
+
+  if (prefixInput) {
+    prefixInput.value =
+      String(prefix);
+  }
+
+  if (slider) {
+    slider.value =
+      String(prefix);
+  }
+
+  const mask =
+    prefixToMask(prefix);
+
+  const maskField =
+    document.getElementById('calc-mask');
+
+  if (maskField) {
+    maskField.value =
+      uint32ToIPv4(mask);
+  }
+
+  setResult(
+    'network-bits-label',
+    prefix
+  );
+
+  setResult(
+    'host-bits-label',
+    32 - prefix
+  );
+
+  const bar =
+    document.getElementById('network-bit-bar');
+
+  if (bar) {
+    bar.style.width =
+      `${(prefix / 32) * 100}%`;
+  }
+}
 
 function calculateSubnet() {
   const errorBox =
     document.getElementById('calc-error');
 
   try {
+    const ipField =
+      document.getElementById('calc-ip');
+
+    const prefixField =
+      document.getElementById('calc-prefix');
+
     const ipUint =
       octetsToUint32(
         parseIPv4(
-          document.getElementById('calc-ip').value
+          ipField.value
         )
       );
 
     const prefix =
-      maskToPrefix(
-        document.getElementById('calc-mask').value
+      clampPrefix(
+        prefixField.value
       );
+
+    updatePrefixUI(prefix);
 
     const mask =
       prefixToMask(prefix);
@@ -455,11 +490,8 @@ function calculateSubnet() {
     let first;
     let last;
     let usable;
+    let range;
 
-    /*
-      /32 = one host route.
-      /31 = point-to-point semantics according to RFC 3021.
-    */
     if (prefix === 32) {
       first =
         uint32ToIPv4(network);
@@ -468,6 +500,7 @@ function calculateSubnet() {
         uint32ToIPv4(network);
 
       usable = 1;
+      range = first;
     } else if (prefix === 31) {
       first =
         uint32ToIPv4(network);
@@ -476,6 +509,9 @@ function calculateSubnet() {
         uint32ToIPv4(broadcast);
 
       usable = 2;
+
+      range =
+        `${first} – ${last}`;
     } else {
       first =
         uint32ToIPv4(
@@ -492,6 +528,9 @@ function calculateSubnet() {
           total - 2,
           0
         );
+
+      range =
+        `${first} – ${last}`;
     }
 
     const binaryMask = [
@@ -507,9 +546,15 @@ function calculateSubnet() {
       )
       .join('.');
 
+    const networkText =
+      uint32ToIPv4(network);
+
+    const maskText =
+      uint32ToIPv4(mask);
+
     setResult(
       'result-network',
-      `${uint32ToIPv4(network)}/${prefix}`
+      networkText
     );
 
     setResult(
@@ -518,8 +563,18 @@ function calculateSubnet() {
     );
 
     setResult(
+      'result-range',
+      range
+    );
+
+    setResult(
+      'result-cidr-network',
+      `${networkText}/${prefix}`
+    );
+
+    setResult(
       'result-mask',
-      uint32ToIPv4(mask)
+      maskText
     );
 
     setResult(
@@ -528,18 +583,8 @@ function calculateSubnet() {
     );
 
     setResult(
-      'result-cidr',
-      `/${prefix}`
-    );
-
-    setResult(
-      'result-first',
-      first
-    );
-
-    setResult(
-      'result-last',
-      last
+      'result-binary',
+      binaryMask
     );
 
     setResult(
@@ -558,13 +603,28 @@ function calculateSubnet() {
     );
 
     setResult(
-      'result-integer',
-      ipUint.toString()
+      'result-class',
+      ipv4Class(ipUint)
     );
 
     setResult(
-      'result-binary',
-      binaryMask
+      'result-cidr',
+      `/${prefix}`
+    );
+
+    setResult(
+      'result-first',
+      first
+    );
+
+    setResult(
+      'result-last',
+      last
+    );
+
+    setResult(
+      'result-integer',
+      ipUint.toString()
     );
 
     errorBox.hidden = true;
@@ -577,52 +637,239 @@ function calculateSubnet() {
   }
 }
 
+const calcIp =
+  document.getElementById('calc-ip');
 
-document
-  .getElementById('calc-button')
-  ?.addEventListener(
-    'click',
-    calculateSubnet
-  );
+const calcPrefix =
+  document.getElementById('calc-prefix');
 
+const calcPrefixSlider =
+  document.getElementById('calc-prefix-slider');
 
-document
-  .getElementById('calc-example')
-  ?.addEventListener(
-    'click',
-    () => {
-      document.getElementById('calc-ip').value =
-        '172.16.35.200';
+calcIp?.addEventListener(
+  'input',
+  calculateSubnet
+);
 
-      document.getElementById('calc-mask').value =
-        '/20';
+calcPrefix?.addEventListener(
+  'input',
+  () => {
+    const prefix =
+      clampPrefix(
+        calcPrefix.value
+      );
 
-      calculateSubnet();
+    updatePrefixUI(prefix);
+
+    calculateSubnet();
+  }
+);
+
+calcPrefixSlider?.addEventListener(
+  'input',
+  () => {
+    const prefix =
+      clampPrefix(
+        calcPrefixSlider.value
+      );
+
+    if (calcPrefix) {
+      calcPrefix.value =
+        String(prefix);
     }
-  );
 
+    updatePrefixUI(prefix);
 
-[
-  'calc-ip',
-  'calc-mask'
-].forEach(id => {
-  document
-    .getElementById(id)
-    ?.addEventListener(
-      'keydown',
-      event => {
-        if (event.key === 'Enter') {
-          calculateSubnet();
+    calculateSubnet();
+  }
+);
+
+document
+  .querySelectorAll('.preset-btn')
+  .forEach(button => {
+    button.addEventListener(
+      'click',
+      () => {
+        if (calcIp) {
+          calcIp.value =
+            button.dataset.ip ||
+            '192.168.1.100';
+        }
+
+        const prefix =
+          clampPrefix(
+            button.dataset.prefix ||
+            24
+          );
+
+        if (calcPrefix) {
+          calcPrefix.value =
+            String(prefix);
+        }
+
+        updatePrefixUI(prefix);
+
+        calculateSubnet();
+      }
+    );
+  });
+
+document
+  .querySelectorAll('.mini-copy')
+  .forEach(button => {
+    button.addEventListener(
+      'click',
+      async () => {
+        const targetId =
+          button.dataset.copyTarget;
+
+        const target =
+          targetId
+            ? document.getElementById(targetId)
+            : null;
+
+        if (!target) {
+          return;
+        }
+
+        try {
+          await navigator.clipboard.writeText(
+            target.textContent.trim()
+          );
+
+          const previous =
+            button.textContent;
+
+          button.textContent =
+            'Copied';
+
+          setTimeout(() => {
+            button.textContent =
+              previous;
+          }, 1000);
+        } catch {
+          button.textContent =
+            'Failed';
+
+          setTimeout(() => {
+            button.textContent =
+              'Copy';
+          }, 1000);
         }
       }
     );
-});
+  });
 
+if (calcIp && calcPrefix) {
+  updatePrefixUI(
+    clampPrefix(
+      calcPrefix.value
+    )
+  );
+
+  calculateSubnet();
+}
+
+
+/* =========================================================================
+   5B. ACTIVE STICKY SUBNAV
+   ========================================================================= */
+
+const subnavLinks = [
+  ...document.querySelectorAll(
+    '.subnav a[href^="#"]'
+  )
+];
+
+const watchedTargets =
+  subnavLinks
+    .map(link => {
+      const id =
+        link
+          .getAttribute('href')
+          ?.slice(1);
+
+      return id
+        ? {
+            link,
+            target:
+              document.getElementById(id)
+          }
+        : null;
+    })
+    .filter(
+      item =>
+        item?.target
+    );
 
 if (
-  document.getElementById('calc-ip')
+  'IntersectionObserver' in window &&
+  watchedTargets.length
 ) {
-  calculateSubnet();
+  const visibleTargets =
+    new Map();
+
+  const observer =
+    new IntersectionObserver(
+      entries => {
+        entries.forEach(entry => {
+          visibleTargets.set(
+            entry.target.id,
+            entry.isIntersecting
+              ? entry.boundingClientRect.top
+              : null
+          );
+        });
+
+        const candidates =
+          watchedTargets
+            .map(item => ({
+              ...item,
+              top:
+                visibleTargets.get(
+                  item.target.id
+                )
+            }))
+            .filter(
+              item =>
+                item.top !== null &&
+                item.top !== undefined
+            )
+            .sort(
+              (a, b) =>
+                Math.abs(a.top) -
+                Math.abs(b.top)
+            );
+
+        subnavLinks.forEach(
+          link =>
+            link.classList.remove(
+              'is-active'
+            )
+        );
+
+        if (candidates[0]) {
+          candidates[0]
+            .link
+            .classList
+            .add('is-active');
+        }
+      },
+      {
+        rootMargin:
+          '-150px 0px -68% 0px',
+
+        threshold:
+          [0, 0.01]
+      }
+    );
+
+  watchedTargets.forEach(
+    item =>
+      observer.observe(
+        item.target
+      )
+  );
 }
 
 
@@ -630,15 +877,6 @@ if (
    6. VLSM CALCULATOR
    ========================================================================= */
 
-/*
-  Find the smallest ordinary LAN subnet
-  that can contain the requested number
-  of usable hosts.
-
-  /31 and /32 are intentionally excluded
-  here because VLSM host requirements are
-  normally meant for classic LAN subnets.
-*/
 function prefixForHosts(requiredHosts) {
   if (
     !Number.isInteger(requiredHosts) ||
@@ -669,16 +907,6 @@ function prefixForHosts(requiredHosts) {
   );
 }
 
-
-/*
-  Parse:
-    10.10.0.0/16
-
-  into:
-    prefix
-    network address
-    broadcast address
-*/
 function parseParentNetwork(value) {
   const match =
     String(value)
@@ -720,18 +948,14 @@ function parseParentNetwork(value) {
   };
 }
 
-
-/*
-  Parse values such as:
-    500, 200, 50, 20
-
-  Spaces and semicolons also work.
-*/
 function parseHostRequirements(value) {
   const items =
     String(value)
       .split(/[,;\s]+/)
-      .map(item => item.trim())
+      .map(
+        item =>
+          item.trim()
+      )
       .filter(Boolean);
 
   if (!items.length) {
@@ -774,10 +998,6 @@ function parseHostRequirements(value) {
   );
 }
 
-
-/*
-  Ensure a subnet starts at a valid boundary.
-*/
 function alignToBlock(
   address,
   blockSize
@@ -787,28 +1007,28 @@ function alignToBlock(
 
   return remainder === 0
     ? address
-    : address + (
-        blockSize - remainder
-      );
+    : address +
+        (
+          blockSize -
+          remainder
+        );
 }
 
-
-/*
-  VLSM allocation strategy:
-  1. Sort requirements largest -> smallest.
-  2. Pick smallest fitting subnet for each.
-  3. Place each subnet on the next valid boundary.
-  4. Stop if parent network is exhausted.
-*/
 function allocateVLSM() {
   const errorBox =
-    document.getElementById('vlsm-error');
+    document.getElementById(
+      'vlsm-error'
+    );
 
   const tbody =
-    document.getElementById('vlsm-results');
+    document.getElementById(
+      'vlsm-results'
+    );
 
   const summary =
-    document.getElementById('vlsm-summary');
+    document.getElementById(
+      'vlsm-summary'
+    );
 
   try {
     const parent =
@@ -825,10 +1045,6 @@ function allocateVLSM() {
         ).value
       );
 
-    /*
-      Largest-first is the standard greedy
-      approach for basic VLSM allocation.
-    */
     requests.sort(
       (a, b) =>
         b.requestedHosts -
@@ -845,10 +1061,6 @@ function allocateVLSM() {
     for (
       const request of requests
     ) {
-      /*
-        A requested subnet cannot be broader
-        than the parent network.
-      */
       if (
         request.prefix <
         parent.prefix
@@ -1018,14 +1230,12 @@ function allocateVLSM() {
   }
 }
 
-
 document
   .getElementById('vlsm-button')
   ?.addEventListener(
     'click',
     allocateVLSM
   );
-
 
 document
   .getElementById('vlsm-example')
@@ -1046,7 +1256,6 @@ document
     }
   );
 
-
 [
   'vlsm-network',
   'vlsm-hosts'
@@ -1056,13 +1265,14 @@ document
     ?.addEventListener(
       'keydown',
       event => {
-        if (event.key === 'Enter') {
+        if (
+          event.key === 'Enter'
+        ) {
           allocateVLSM();
         }
       }
     );
 });
-
 
 if (
   document.getElementById(
