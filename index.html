@@ -96,7 +96,7 @@
       <h1>Network Engineer's Cheat Sheet</h1>
       <p>
         Quick reference for Cisco IOS, Windows, PowerShell, Linux and common networking tools.
-        Use the search bar above or press <kbd>Ctrl</kbd> + <kbd>F</kbd>.
+        Use the search bar above, press <kbd>/</kbd> to focus it, or use <kbd>Ctrl</kbd> + <kbd>F</kbd>.
       </p>
     </section>
 
@@ -4307,45 +4307,196 @@ end</code>
         </table>
       </div>
 
-      <div id="subnet-calculator" class="calculator-panel">
-        <div class="calculator-heading">
+      <div id="subnet-calculator" class="calculator-shell">
+        <div class="calculator-topline">
           <div>
+            <span class="eyebrow">Interactive tool</span>
             <h3>IPv4 Subnet Calculator</h3>
-            <p>Enter an IPv4 address and either CIDR prefix or dotted-decimal mask.</p>
+            <p>Change the address or drag the prefix slider — results update instantly.</p>
           </div>
-          <button id="calc-example" class="secondary-btn" type="button">Example</button>
+
+          <div class="preset-row" aria-label="Subnet calculator examples">
+            <button class="preset-btn" type="button" data-ip="192.168.1.100" data-prefix="24">192.168.1.0/24</button>
+            <button class="preset-btn" type="button" data-ip="10.0.0.50" data-prefix="8">10.0.0.0/8</button>
+            <button class="preset-btn" type="button" data-ip="172.16.10.20" data-prefix="12">172.16.0.0/12</button>
+            <button class="preset-btn" type="button" data-ip="10.0.0.0" data-prefix="31">/31 P2P</button>
+          </div>
         </div>
 
-        <div class="calculator-form">
-          <label>
-            IP address
-            <input id="calc-ip" type="text" value="192.168.10.123" placeholder="192.168.10.123" spellcheck="false">
+        <div class="calculator-controls">
+          <label class="calc-field calc-field-ip">
+            <span>IPv4 address</span>
+            <input
+              id="calc-ip"
+              type="text"
+              inputmode="decimal"
+              value="192.168.10.123"
+              placeholder="192.168.10.123"
+              spellcheck="false"
+            >
           </label>
-          <label>
-            CIDR / mask
-            <input id="calc-mask" type="text" value="/24" placeholder="/24 or 255.255.255.0" spellcheck="false">
+
+          <div class="prefix-control">
+            <div class="prefix-heading">
+              <label for="calc-prefix">Prefix length</label>
+              <div class="prefix-number-wrap">
+                <span>/</span>
+                <input
+                  id="calc-prefix"
+                  type="number"
+                  min="0"
+                  max="32"
+                  step="1"
+                  value="24"
+                  inputmode="numeric"
+                  aria-label="CIDR prefix length"
+                >
+              </div>
+            </div>
+
+            <input
+              id="calc-prefix-slider"
+              class="prefix-slider"
+              type="range"
+              min="0"
+              max="32"
+              step="1"
+              value="24"
+              aria-label="CIDR prefix slider"
+            >
+
+            <div class="slider-scale" aria-hidden="true">
+              <span>/0</span>
+              <span>/8</span>
+              <span>/16</span>
+              <span>/24</span>
+              <span>/32</span>
+            </div>
+          </div>
+
+          <label class="calc-field">
+            <span>Subnet mask</span>
+            <input
+              id="calc-mask"
+              class="readonly-field"
+              type="text"
+              value="255.255.255.0"
+              readonly
+              tabindex="-1"
+            >
           </label>
-          <button id="calc-button" class="calc-btn" type="button">Calculate</button>
+        </div>
+
+        <div class="bit-visual" aria-label="Network and host bit split">
+          <div class="bit-labels">
+            <span><strong id="network-bits-label">24</strong> network bits</span>
+            <span><strong id="host-bits-label">8</strong> host bits</span>
+          </div>
+          <div class="bit-track">
+            <div id="network-bit-bar" class="network-bit-bar"></div>
+            <div id="host-bit-bar" class="host-bit-bar"></div>
+          </div>
         </div>
 
         <div id="calc-error" class="calc-error" hidden></div>
 
-        <div id="calc-results" class="calc-results">
-          <div><span>Network</span><strong id="result-network">—</strong></div>
-          <div><span>Broadcast</span><strong id="result-broadcast">—</strong></div>
-          <div><span>Subnet mask</span><strong id="result-mask">—</strong></div>
-          <div><span>Wildcard mask</span><strong id="result-wildcard">—</strong></div>
-          <div><span>CIDR</span><strong id="result-cidr">—</strong></div>
-          <div><span>First usable</span><strong id="result-first">—</strong></div>
-          <div><span>Last usable</span><strong id="result-last">—</strong></div>
-          <div><span>Total addresses</span><strong id="result-total">—</strong></div>
-          <div><span>Usable hosts</span><strong id="result-usable">—</strong></div>
-          <div><span>IP type</span><strong id="result-type">—</strong></div>
-          <div><span>IP as integer</span><strong id="result-integer">—</strong></div>
-          <div><span>Binary mask</span><strong id="result-binary">—</strong></div>
+        <div class="result-groups" id="calc-results" aria-live="polite">
+          <section class="result-group">
+            <div class="result-group-title">Addressing</div>
+
+            <div class="result-row">
+              <span>Network address</span>
+              <div class="result-value">
+                <code id="result-network">—</code>
+                <button class="mini-copy" type="button" data-copy-target="result-network">Copy</button>
+              </div>
+            </div>
+
+            <div class="result-row">
+              <span>Broadcast address</span>
+              <div class="result-value">
+                <code id="result-broadcast">—</code>
+                <button class="mini-copy" type="button" data-copy-target="result-broadcast">Copy</button>
+              </div>
+            </div>
+
+            <div class="result-row">
+              <span>Usable host range</span>
+              <div class="result-value">
+                <code id="result-range">—</code>
+                <button class="mini-copy" type="button" data-copy-target="result-range">Copy</button>
+              </div>
+            </div>
+
+            <div class="result-row">
+              <span>CIDR notation</span>
+              <div class="result-value">
+                <code id="result-cidr-network">—</code>
+                <button class="mini-copy" type="button" data-copy-target="result-cidr-network">Copy</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="result-group">
+            <div class="result-group-title">Masks</div>
+
+            <div class="result-row">
+              <span>Subnet mask</span>
+              <div class="result-value">
+                <code id="result-mask">—</code>
+                <button class="mini-copy" type="button" data-copy-target="result-mask">Copy</button>
+              </div>
+            </div>
+
+            <div class="result-row">
+              <span>Wildcard mask</span>
+              <div class="result-value">
+                <code id="result-wildcard">—</code>
+                <button class="mini-copy" type="button" data-copy-target="result-wildcard">Copy</button>
+              </div>
+            </div>
+
+            <div class="result-row result-row-wide">
+              <span>Binary mask</span>
+              <div class="result-value">
+                <code id="result-binary">—</code>
+                <button class="mini-copy" type="button" data-copy-target="result-binary">Copy</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="result-group">
+            <div class="result-group-title">Capacity</div>
+
+            <div class="capacity-grid">
+              <div class="capacity-stat">
+                <span>Total addresses</span>
+                <strong id="result-total">—</strong>
+              </div>
+              <div class="capacity-stat">
+                <span>Usable hosts</span>
+                <strong id="result-usable">—</strong>
+              </div>
+              <div class="capacity-stat">
+                <span>IP type</span>
+                <strong id="result-type">—</strong>
+              </div>
+              <div class="capacity-stat">
+                <span>IP class</span>
+                <strong id="result-class">—</strong>
+              </div>
+            </div>
+          </section>
         </div>
+
+        <!-- Compatibility values used by older NECS JS / future extensions. -->
+        <span id="result-cidr" hidden>—</span>
+        <span id="result-first" hidden>—</span>
+        <span id="result-last" hidden>—</span>
+        <span id="result-integer" hidden>—</span>
       </div>
-      <!-- ================================================================
+
+<!-- ================================================================
            VLSM CALCULATOR
            Edit labels/layout here; calculation logic lives in script.js.
            ================================================================ -->
