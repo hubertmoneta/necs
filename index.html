@@ -8,6 +8,37 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!--
+    ========================================================================
+    NECS EDITING GUIDE
+    ========================================================================
+
+    FILES
+      index.html  -> content: commands, recipes, tables and calculator markup
+      style.css   -> layout, colors, cards, navigation and responsive design
+      script.js   -> search, copy buttons, IPv4 calculator and VLSM calculator
+
+    ADD A SINGLE COMMAND
+      Copy any <article class="command-card">...</article> block.
+      Edit:
+        data-search = hidden keywords used by the site search
+        <code>      = command / filter / shortcut
+        <p>         = short English explanation
+
+    ADD A MULTI-COMMAND RECIPE
+      Copy a <article class="command-card recipe-card"> block.
+      Use obvious placeholders such as <SERVER_IP>, <SECRET>, <INTERFACE>.
+
+    ADD A NEW TOP-LEVEL SECTION
+      Copy a <section class="command-section"> block and give it a unique id.
+      Then add an <a href="#that-id"> link to the navigation if desired.
+
+    IMPORTANT
+      Cisco command syntax and feature support vary between platforms,
+      licensing levels and IOS / IOS XE releases. Treat recipes as templates
+      and verify them on the target platform before production use.
+    ========================================================================
+  -->
 
   <header class="topbar">
     <div class="topbar-inner">
@@ -19,6 +50,9 @@
         <a href="#powershell">PowerShell</a>
         <a href="#linux">Linux</a>
         <a href="#networking">Networking</a>
+        <a href="#ipv4">IPv4</a>
+        <a href="#windows-ad">AD/DNS</a>
+        <a href="#wireshark">Wireshark</a>
       </nav>
 
       <div class="search-wrap">
@@ -34,6 +68,29 @@
     </div>
   </header>
 
+  <div class="subnav" aria-label="Section shortcuts">
+    <div class="subnav-inner">
+      <a href="#cisco-recipes">Cisco Recipes</a>
+      <a href="#cisco-interfaces">Interfaces</a>
+      <a href="#cisco-vlan">VLAN/L2</a>
+      <a href="#cisco-routing">Routing</a>
+      <a href="#cisco-security">AAA/Security</a>
+      <a href="#windows-quick">Win+R</a>
+      <a href="#windows">Windows</a>
+      <a href="#powershell">PowerShell</a>
+      <a href="#linux">Linux</a>
+      <a href="#ipv4">IPv4/Subnet</a>
+      <a href="#cisco-aaa">AAA/TACACS+</a>
+      <a href="#cisco-dot1x">802.1X/MAB</a>
+      <a href="#cisco-fhrp">HSRP</a>
+      <a href="#cisco-vrf">VRF</a>
+      <a href="#cisco-stack">StackWise</a>
+      <a href="#cisco-qos">QoS</a>
+      <a href="#vlsm-calculator">VLSM</a>
+    </div>
+  </div>
+
+
   <main id="top" class="container">
     <section class="hero">
       <h1>Network Engineer's Cheat Sheet</h1>
@@ -47,6 +104,369 @@
     <section id="cisco" class="command-section">
       <h2>Cisco IOS</h2>
       <p class="section-description">Common Cisco IOS commands for switching, routing and troubleshooting.</p>
+
+      <h3 id="cisco-recipes">Configuration Recipes</h3>
+      <p class="subsection-description">
+        End-to-end examples for common tasks. Replace addresses, interface names, usernames and secrets before use.
+        IOS/IOS XE syntax can vary by platform and release.
+      </p>
+
+      <article class="command-card recipe-card" data-search="cisco recipe ssh secure management local user aaa vty rsa keys login transport">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>Secure SSH management with local fallback</strong>
+        </div>
+        <div class="recipe-note warning">Keep at least one tested local administrative account before changing AAA or remote access.</div>
+        <div class="command-header">
+          <code>configure terminal
+hostname SW1
+ip domain-name example.local
+username netadmin privilege 15 secret &lt;LOCAL_SECRET&gt;
+crypto key generate rsa modulus 2048
+ip ssh version 2
+
+aaa new-model
+aaa authentication login VTY-LOGIN local
+
+line vty 0 15
+ login authentication VTY-LOGIN
+ transport input ssh
+ exec-timeout 15 0
+
+end
+write memory</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Creates RSA keys, enables SSHv2, defines a privileged local account and restricts VTY access to SSH.</p>
+      </article>
+
+      <article class="command-card recipe-card" data-search="cisco recipe radius aaa authentication authorization accounting local fallback console ssh vty">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>RADIUS AAA with local fallback and console safety</strong>
+        </div>
+        <div class="recipe-note warning">Test from a second active session before closing your current session. AAA mistakes can lock you out.</div>
+        <div class="command-header">
+          <code>configure terminal
+aaa new-model
+
+radius server RADIUS1
+ address ipv4 10.10.10.20 auth-port 1812 acct-port 1813
+ key &lt;RADIUS_SHARED_SECRET&gt;
+
+aaa group server radius RAD-GRP
+ server name RADIUS1
+
+aaa authentication login VTY-LOGIN group RAD-GRP local
+aaa authorization exec VTY-AUTHZ group RAD-GRP local if-authenticated
+aaa accounting exec VTY-ACCT start-stop group RAD-GRP
+
+aaa authentication login CONSOLE-LOGIN local
+
+line vty 0 15
+ login authentication VTY-LOGIN
+ authorization exec VTY-AUTHZ
+ accounting exec VTY-ACCT
+ transport input ssh
+
+line console 0
+ login authentication CONSOLE-LOGIN
+
+end</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Uses RADIUS first for VTY login, then falls back to the local database. Console login uses a separate local-only method list to reduce lockout risk.</p>
+      </article>
+
+      <article class="command-card recipe-card" data-search="cisco radius source interface management vlan reachability ping aaa servers">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>RADIUS source interface and reachability</strong>
+        </div>
+        
+        <div class="command-header">
+          <code>configure terminal
+ip radius source-interface Vlan99
+
+radius server RADIUS1
+ address ipv4 10.10.10.20 auth-port 1812 acct-port 1813
+ key &lt;RADIUS_SHARED_SECRET&gt;
+
+end
+
+show ip route 10.10.10.20
+ping 10.10.10.20 source Vlan99
+show aaa servers</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Pins RADIUS traffic to a predictable management source interface and verifies routing/reachability.</p>
+      </article>
+
+      <article class="command-card recipe-card" data-search="cisco recipe snmpv3 snmp monitoring nms traps auth priv aes sha">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>SNMPv3 read-only monitoring</strong>
+        </div>
+        <div class="recipe-note warning">Prefer SNMPv3 over SNMPv1/v2c when possible. Exact supported authentication/privacy algorithms vary by IOS release.</div>
+        <div class="command-header">
+          <code>configure terminal
+snmp-server view NMS-VIEW iso included
+snmp-server group NMS-GROUP v3 priv read NMS-VIEW
+snmp-server user NMSUSER NMS-GROUP v3 auth sha &lt;AUTH_SECRET&gt; priv aes 128 &lt;PRIV_SECRET&gt;
+
+snmp-server location &lt;LOCATION&gt;
+snmp-server contact &lt;CONTACT&gt;
+snmp-server host 10.10.10.30 version 3 priv NMSUSER
+snmp-server enable traps
+
+end
+write memory</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Creates a basic authenticated and encrypted SNMPv3 monitoring configuration and sends traps to an NMS host.</p>
+      </article>
+
+      <article class="command-card recipe-card" data-search="cisco recipe snmpv2 snmp community readonly ro acl nms traps">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>SNMPv2c read-only (legacy/simple)</strong>
+        </div>
+        <div class="recipe-note warning">SNMPv2c community strings are not encrypted. Use SNMPv3 where supported.</div>
+        <div class="command-header">
+          <code>configure terminal
+ip access-list standard SNMP-NMS
+ permit host 10.10.10.30
+
+snmp-server community &lt;COMMUNITY&gt; RO SNMP-NMS
+snmp-server host 10.10.10.30 version 2c &lt;COMMUNITY&gt;
+snmp-server enable traps
+
+end</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Restricts an SNMPv2c read-only community to a specific NMS address using an ACL.</p>
+      </article>
+
+      <article class="command-card recipe-card" data-search="cisco recipe ntp time clock timezone source interface management">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>NTP with a management source interface</strong>
+        </div>
+        
+        <div class="command-header">
+          <code>configure terminal
+clock timezone CET 1 0
+clock summer-time CEST recurring last Sun Mar 2:00 last Sun Oct 3:00
+ntp source Vlan99
+ntp server 10.10.10.40 prefer
+
+end
+
+show clock
+show ntp associations
+show ntp status</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Configures timezone, daylight saving time, an NTP source interface and a preferred NTP server.</p>
+      </article>
+
+      <article class="command-card recipe-card" data-search="cisco recipe syslog logging remote server source interface timestamps">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>Remote Syslog</strong>
+        </div>
+        
+        <div class="command-header">
+          <code>configure terminal
+logging host 10.10.10.50
+logging source-interface Vlan99
+logging trap informational
+service timestamps log datetime msec localtime show-timezone
+
+end
+
+show logging</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Sends informational-or-higher Syslog messages to a remote log server using a stable source interface.</p>
+      </article>
+
+      <article class="command-card recipe-card" data-search="cisco recipe management vlan svi ip default gateway layer2 switch">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>Management SVI + default gateway on Layer 2 switch</strong>
+        </div>
+        
+        <div class="command-header">
+          <code>configure terminal
+vlan 99
+ name MANAGEMENT
+
+interface Vlan99
+ description MANAGEMENT
+ ip address 192.168.99.10 255.255.255.0
+ no shutdown
+
+ip default-gateway 192.168.99.1
+
+end
+write memory</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Creates a management VLAN/SVI and configures the default gateway on a Layer 2 switch.</p>
+      </article>
+
+      <article class="command-card recipe-card" data-search="cisco recipe access port vlan portfast bpduguard port security sticky">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>Access port with common edge protections</strong>
+        </div>
+        
+        <div class="command-header">
+          <code>configure terminal
+interface GigabitEthernet1/0/10
+ description USER-PORT
+ switchport mode access
+ switchport access vlan 10
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ no shutdown
+
+end</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Configures a user access port with PortFast, BPDU Guard and basic port security.</p>
+      </article>
+
+      <article class="command-card recipe-card" data-search="cisco recipe lacp etherchannel port channel trunk interface range allowed vlan">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>LACP trunk EtherChannel</strong>
+        </div>
+        
+        <div class="command-header">
+          <code>configure terminal
+interface range GigabitEthernet1/0/47-48
+ description UPLINK-LACP
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20,30,99
+ channel-group 1 mode active
+ no shutdown
+
+interface Port-channel1
+ description UPLINK-LACP
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20,30,99
+
+end
+
+show etherchannel summary
+show interfaces trunk</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Builds an LACP Port-Channel trunk from two physical links and verifies the result.</p>
+      </article>
+
+      <article class="command-card recipe-card" data-search="cisco recipe dhcp relay ip helper address svi vlan">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>DHCP relay on an SVI</strong>
+        </div>
+        
+        <div class="command-header">
+          <code>configure terminal
+interface Vlan10
+ ip address 192.168.10.1 255.255.255.0
+ ip helper-address 10.10.10.60
+ no shutdown
+
+end
+
+show ip interface Vlan10</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Relays DHCP broadcasts received in VLAN 10 to a remote DHCP server.</p>
+      </article>
+
+      <article class="command-card recipe-card" data-search="cisco recipe dhcp snooping trust rate limit access ports security">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>DHCP Snooping on access VLANs</strong>
+        </div>
+        
+        <div class="command-header">
+          <code>configure terminal
+ip dhcp snooping
+ip dhcp snooping vlan 10,20
+no ip dhcp snooping information option
+
+interface GigabitEthernet1/0/48
+ description TRUSTED-UPLINK
+ ip dhcp snooping trust
+
+interface range GigabitEthernet1/0/1-47
+ ip dhcp snooping limit rate 20
+
+end
+
+show ip dhcp snooping
+show ip dhcp snooping binding</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Enables DHCP snooping, trusts the uplink and rate-limits DHCP messages on access ports.</p>
+      </article>
+
+      <article class="command-card recipe-card" data-search="cisco recipe ospf area 0 router id passive interface network wildcard">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>OSPF single-area starter</strong>
+        </div>
+        
+        <div class="command-header">
+          <code>configure terminal
+router ospf 1
+ router-id 10.255.255.1
+ passive-interface default
+ no passive-interface GigabitEthernet0/0
+ network 10.0.0.0 0.0.0.255 area 0
+ network 192.168.10.0 0.0.0.255 area 0
+
+end
+
+show ip ospf neighbor
+show ip route ospf
+show ip ospf interface brief</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Creates a basic area 0 OSPF process, sets a router ID and keeps non-neighbor-facing interfaces passive.</p>
+      </article>
+
+      <article class="command-card recipe-card" data-search="cisco recipe acl management ssh vty access class permit subnet">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>Standard ACL for management-plane access</strong>
+        </div>
+        
+        <div class="command-header">
+          <code>configure terminal
+ip access-list standard MGMT-SSH
+ permit 192.168.99.0 0.0.0.255
+ deny any log
+
+line vty 0 15
+ access-class MGMT-SSH in
+ transport input ssh
+
+end</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Restricts inbound VTY/SSH access to the management subnet.</p>
+      </article>
+
 
       <h3>General & Device Information</h3>
 
@@ -82,7 +502,7 @@
         <p>Saves the current running configuration to startup configuration.</p>
       </article>
 
-      <h3>Interfaces</h3>
+      <h3 id="cisco-interfaces">Interfaces</h3>
 
       <article class="command-card" data-search="cisco show ip interface brief interfaces status ip addresses up down administratively down">
         <div class="command-header">
@@ -133,7 +553,7 @@ interface GigabitEthernet1/0/1</code>
         <p>Administratively disables an interface.</p>
       </article>
 
-      <h3>VLANs & Switching</h3>
+      <h3 id="cisco-vlan">VLANs & Switching</h3>
 
       <article class="command-card" data-search="cisco show vlan brief vlan list ports switching">
         <div class="command-header">
@@ -207,7 +627,7 @@ switchport trunk allowed vlan 10,20,30</code>
         <p>Displays STP information specifically for VLAN 10.</p>
       </article>
 
-      <h3>Routing</h3>
+      <h3 id="cisco-routing">Routing</h3>
 
       <article class="command-card" data-search="cisco show ip route routing table routes connected static ospf default gateway">
         <div class="command-header">
@@ -768,7 +1188,7 @@ permit tcp 192.168.10.0 0.0.0.255 any eq 443</code>
         <p>Configures PAT using the outside interface address for source translation.</p>
       </article>
 
-      <h3>Port Security</h3>
+      <h3 id="cisco-security">Port Security</h3>
 
       <article class="command-card" data-search="cisco port security interface sticky violation mac">
         <div class="command-header">
@@ -987,7 +1407,965 @@ ip dhcp snooping vlan 10,20</code>
         <p>Prevents line wrapping on many IOS platforms by using maximum terminal width.</p>
       </article>
 
+      <h3>AAA, RADIUS, SNMP & Management Verification</h3>
+
+      <article class="command-card " data-search="cisco aaa servers radius status counters">
+        <span class="card-badge">Verify</span>
+        <div class="command-header">
+          <code>show aaa servers</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays AAA server status and counters on supported IOS/IOS XE platforms.</p>
+      </article>
+
+      <article class="command-card " data-search="cisco radius statistics timeout authentication">
+        <span class="card-badge">Verify</span>
+        <div class="command-header">
+          <code>show radius statistics</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays RADIUS request, response, timeout and retransmission counters on supported platforms.</p>
+      </article>
+
+      <article class="command-card " data-search="cisco test aaa radius authentication username password">
+        <span class="card-badge">Verify</span>
+        <div class="command-header">
+          <code>test aaa group radius &lt;USERNAME&gt; &lt;PASSWORD&gt; legacy</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Tests RADIUS authentication from the device. Exact syntax can differ by IOS/IOS XE release.</p>
+      </article>
+
+      <article class="command-card " data-search="cisco snmpv3 user group auth priv">
+        <span class="card-badge">Verify</span>
+        <div class="command-header">
+          <code>show snmp user</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays configured SNMPv3 users and their security parameters.</p>
+      </article>
+
+      <article class="command-card " data-search="cisco snmp group v3 security">
+        <span class="card-badge">Verify</span>
+        <div class="command-header">
+          <code>show snmp group</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays SNMP groups, versions, security models and access settings.</p>
+      </article>
+
+      <article class="command-card " data-search="cisco snmp counters status">
+        <span class="card-badge">Verify</span>
+        <div class="command-header">
+          <code>show snmp</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows general SNMP engine counters and status.</p>
+      </article>
+
+      <article class="command-card " data-search="cisco access list hit counters management radius snmp ssh">
+        <span class="card-badge">Verify</span>
+        <div class="command-header">
+          <code>show access-lists</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Useful when validating management ACL hit counters for SNMP, SSH or other services.</p>
+      </article>
+
+      <!-- ================================================================
+           CISCO ADVANCED CONFIGURATION & TROUBLESHOOTING
+           ================================================================ -->
+
+      <h3 id="cisco-aaa">AAA & TACACS+</h3>
+      <p class="subsection-description">
+        Management-plane authentication, authorization and accounting.
+        Keep a tested local break-glass account and an active recovery session while changing AAA.
+      </p>
+
+      <article class="command-card recipe-card" data-search="cisco tacacs tacacs+ aaa authentication authorization accounting local fallback ssh vty commands">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>TACACS+ with local fallback for SSH</strong>
+        </div>
+        <div class="recipe-note warning">AAA mistakes can lock you out. Test from a second active session before closing the current one.</div>
+        <div class="command-header">
+          <code>configure terminal
+aaa new-model
+
+username netadmin privilege 15 secret &lt;LOCAL_BREAKGLASS_SECRET&gt;
+
+tacacs server TACACS1
+ address ipv4 10.10.10.21
+ key &lt;TACACS_SHARED_SECRET&gt;
+
+tacacs server TACACS2
+ address ipv4 10.10.10.22
+ key &lt;TACACS_SHARED_SECRET&gt;
+
+aaa group server tacacs+ TAC-GRP
+ server name TACACS1
+ server name TACACS2
+
+aaa authentication login VTY-AUTH group TAC-GRP local
+aaa authorization exec VTY-EXEC group TAC-GRP local if-authenticated
+aaa authorization commands 15 VTY-CMD15 group TAC-GRP local
+aaa accounting exec VTY-ACCT start-stop group TAC-GRP
+aaa accounting commands 15 VTY-CMD15-ACCT start-stop group TAC-GRP
+
+line vty 0 15
+ login authentication VTY-AUTH
+ authorization exec VTY-EXEC
+ authorization commands 15 VTY-CMD15
+ accounting exec VTY-ACCT
+ accounting commands 15 VTY-CMD15-ACCT
+ transport input ssh
+
+end</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Defines redundant TACACS+ servers and uses them first for SSH/VTY AAA, with the local database as fallback.</p>
+      </article>
+
+      <article class="command-card recipe-card" data-search="cisco aaa tacacs console local login break glass recovery">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>Keep console authentication local</strong>
+        </div>
+        
+        <div class="command-header">
+          <code>configure terminal
+aaa authentication login CONSOLE-LOCAL local
+
+line console 0
+ login authentication CONSOLE-LOCAL
+ exec-timeout 15 0
+
+end</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Keeps console login independent from remote AAA availability.</p>
+      </article>
+
+      <article class="command-card recipe-card" data-search="cisco tacacs source interface vlan mgmt vrf forwarding aaa group routing">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>TACACS+ source interface / management VRF pattern</strong>
+        </div>
+        
+        <div class="command-header">
+          <code>configure terminal
+ip tacacs source-interface Vlan99
+
+aaa group server tacacs+ TAC-GRP
+ ip vrf forwarding Mgmt-vrf
+
+end
+
+show ip route vrf Mgmt-vrf 10.10.10.21
+ping vrf Mgmt-vrf 10.10.10.21 source Vlan99</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Uses a predictable source interface and, on supported IOS XE platforms, associates the TACACS+ server group with a management VRF.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco show aaa servers radius tacacs alive dead counters">
+        <span class="card-badge">Verify</span>
+        
+        <div class="command-header">
+          <code>show aaa servers</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays AAA server status and request counters on supported IOS XE platforms.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco test aaa tacacs authentication credentials troubleshooting">
+        <span class="card-badge">Test</span>
+        
+        <div class="command-header">
+          <code>test aaa group tacacs+ &lt;USERNAME&gt; &lt;PASSWORD&gt; legacy</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Tests an AAA group using supplied credentials. Exact test syntax varies between releases.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco debug aaa authentication login tacacs radius troubleshooting">
+        <span class="card-badge">Debug</span>
+        <div class="card-note">Debugging can generate heavy console/log output. Use targeted show commands first.</div>
+        <div class="command-header">
+          <code>debug aaa authentication</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Enables AAA authentication debug output.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco debug tacacs server timeout troubleshooting">
+        <span class="card-badge">Debug</span>
+        <div class="card-note">Disable debugging when finished.</div>
+        <div class="command-header">
+          <code>debug tacacs</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Enables TACACS+ debugging on platforms/releases that support it.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco undebug all u all disable debug">
+        <span class="card-badge">Safety</span>
+        
+        <div class="command-header">
+          <code>undebug all</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Disables all active debug commands.</p>
+      </article>
+
+      <h3 id="cisco-dot1x">802.1X & MAB</h3>
+      <p class="subsection-description">
+        Wired NAC building blocks. Catalyst generations differ significantly in access-session and policy syntax,
+        so use these as conceptual templates and verify against the target IOS XE release.
+      </p>
+
+      <article class="command-card recipe-card" data-search="cisco dot1x 802.1x mab ise radius nac access port authentication order priority">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>Basic 802.1X + MAB access port</strong>
+        </div>
+        <div class="recipe-note warning">Newer Catalyst IOS XE deployments may use policy-map/access-session syntax instead.</div>
+        <div class="command-header">
+          <code>configure terminal
+aaa new-model
+aaa authentication dot1x default group radius
+aaa authorization network default group radius
+
+dot1x system-auth-control
+
+interface GigabitEthernet1/0/10
+ description NAC-ACCESS
+ switchport mode access
+ switchport access vlan 10
+ authentication port-control auto
+ authentication order dot1x mab
+ authentication priority dot1x mab
+ mab
+ dot1x pae authenticator
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ no shutdown
+
+end</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Configures a common legacy-style access port that attempts 802.1X and then MAB.</p>
+      </article>
+
+      <article class="command-card recipe-card" data-search="cisco radius ise dot1x mab aaa authentication authorization accounting">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>RADIUS backend for wired 802.1X/MAB</strong>
+        </div>
+        
+        <div class="command-header">
+          <code>configure terminal
+radius server ISE1
+ address ipv4 10.10.10.31 auth-port 1812 acct-port 1813
+ key &lt;RADIUS_SHARED_SECRET&gt;
+
+aaa group server radius ISE-GRP
+ server name ISE1
+
+aaa authentication dot1x default group ISE-GRP
+aaa authorization network default group ISE-GRP
+aaa accounting dot1x default start-stop group ISE-GRP
+
+end</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Creates a named RADIUS server/group for 802.1X authentication, authorization and accounting.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco show authentication sessions dot1x mab ise endpoint">
+        <span class="card-badge">Verify</span>
+        
+        <div class="command-header">
+          <code>show authentication sessions</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows endpoint authentication sessions on supported Catalyst releases.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco authentication session interface details dot1x mab vlan">
+        <span class="card-badge">Verify</span>
+        
+        <div class="command-header">
+          <code>show authentication sessions interface GigabitEthernet1/0/10 details</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays detailed legacy-style authentication state for one port.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco access-session interface details dot1x mab catalyst ios xe">
+        <span class="card-badge">Verify</span>
+        
+        <div class="command-header">
+          <code>show access-session interface GigabitEthernet1/0/10 details</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays detailed access-session information on newer IOS XE platforms that use access-session commands.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco show dot1x all 802.1x status">
+        <span class="card-badge">Verify</span>
+        
+        <div class="command-header">
+          <code>show dot1x all</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays 802.1X state and configuration information on supported platforms.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco clear authentication session reauthenticate dot1x mab">
+        <span class="card-badge">Troubleshoot</span>
+        
+        <div class="command-header">
+          <code>clear authentication sessions interface GigabitEthernet1/0/10</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Clears a port authentication session so the endpoint can authenticate again.</p>
+      </article>
+
+      <h3 id="cisco-fhrp">HSRP / First-Hop Redundancy</h3>
+
+      <article class="command-card recipe-card" data-search="cisco hsrp standby active gateway virtual ip priority preempt svi">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>HSRP primary SVI</strong>
+        </div>
+        
+        <div class="command-header">
+          <code>configure terminal
+interface Vlan10
+ ip address 192.168.10.2 255.255.255.0
+ standby 10 ip 192.168.10.1
+ standby 10 priority 110
+ standby 10 preempt
+ no shutdown
+
+end
+
+show standby brief</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Makes this SVI the preferred HSRP active gateway for VLAN 10.</p>
+      </article>
+
+      <article class="command-card recipe-card" data-search="cisco hsrp standby secondary peer gateway priority">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>HSRP secondary SVI</strong>
+        </div>
+        
+        <div class="command-header">
+          <code>configure terminal
+interface Vlan10
+ ip address 192.168.10.3 255.255.255.0
+ standby 10 ip 192.168.10.1
+ standby 10 priority 100
+ standby 10 preempt
+ no shutdown
+
+end
+
+show standby brief</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Configures the peer as the lower-priority HSRP gateway.</p>
+      </article>
+
+      <article class="command-card recipe-card" data-search="cisco hsrp track interface uplink decrement priority failover">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>HSRP with uplink object tracking</strong>
+        </div>
+        
+        <div class="command-header">
+          <code>configure terminal
+track 10 interface GigabitEthernet1/0/48 line-protocol
+
+interface Vlan10
+ standby 10 ip 192.168.10.1
+ standby 10 priority 110
+ standby 10 preempt
+ standby 10 track 10 decrement 30
+
+end</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Decrements HSRP priority if the tracked uplink fails, allowing the peer to take over.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco show standby brief hsrp active standby virtual">
+        <span class="card-badge">Verify</span>
+        
+        <div class="command-header">
+          <code>show standby brief</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows HSRP state, active/standby peers, priority and virtual IPs.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco show track object tracking hsrp">
+        <span class="card-badge">Verify</span>
+        
+        <div class="command-header">
+          <code>show track</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays object-tracking state used by HSRP and other features.</p>
+      </article>
+
+      <h3 id="cisco-vrf">VRF / VRF-Lite</h3>
+
+      <article class="command-card recipe-card" data-search="cisco vrf definition vrf-lite forwarding interface routing table static route">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>Basic VRF-Lite</strong>
+        </div>
+        
+        <div class="command-header">
+          <code>configure terminal
+vrf definition CORP
+ address-family ipv4
+ exit-address-family
+
+interface GigabitEthernet0/0
+ vrf forwarding CORP
+ ip address 10.20.0.1 255.255.255.252
+ no shutdown
+
+ip route vrf CORP 0.0.0.0 0.0.0.0 10.20.0.2
+
+end</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Creates an IPv4 VRF, assigns an interface to it and adds a VRF-specific default route.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco show vrf interfaces routing instances">
+        <span class="card-badge">Verify</span>
+        
+        <div class="command-header">
+          <code>show vrf</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Lists configured VRFs and their associated interfaces.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco show ip route vrf routing table">
+        <span class="card-badge">Verify</span>
+        
+        <div class="command-header">
+          <code>show ip route vrf CORP</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows the IPv4 routing table for one VRF.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco ping vrf connectivity troubleshoot">
+        <span class="card-badge">Test</span>
+        
+        <div class="command-header">
+          <code>ping vrf CORP 8.8.8.8</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Tests reachability using the selected VRF routing table.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco traceroute vrf path troubleshoot">
+        <span class="card-badge">Test</span>
+        
+        <div class="command-header">
+          <code>traceroute vrf CORP 8.8.8.8</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Runs traceroute inside the selected VRF.</p>
+      </article>
+
+      <h3 id="cisco-stack">StackWise / Switch Stack</h3>
+
+      <article class="command-card" data-search="cisco stackwise show switch active standby member priority">
+        <span class="card-badge">Verify</span>
+        
+        <div class="command-header">
+          <code>show switch</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows stack members, numbers, roles, priority, MAC address and state.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco stackwise switch detail neighbors state">
+        <span class="card-badge">Verify</span>
+        
+        <div class="command-header">
+          <code>show switch detail</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows detailed stack membership and stack-neighbor information.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco stackwise stack ports summary cable neighbor link sync changes">
+        <span class="card-badge">Verify</span>
+        
+        <div class="command-header">
+          <code>show switch stack-ports summary</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows stack-port status, neighbor, cable length, synchronization and link-change counters.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco stackwise bandwidth ring full half">
+        <span class="card-badge">Verify</span>
+        
+        <div class="command-header">
+          <code>show switch stack-bandwidth</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows StackWise ring bandwidth state on supported Catalyst platforms.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco stack redundancy active standby switchover">
+        <span class="card-badge">Verify</span>
+        
+        <div class="command-header">
+          <code>show redundancy</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows active/standby redundancy and switchover state.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco stackwise switch priority election active">
+        <span class="card-badge">Config</span>
+        
+        <div class="command-header">
+          <code>switch 2 priority 14</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Changes stack-election priority for member 2.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco stackwise renumber member interfaces">
+        <span class="card-badge">Config</span>
+        <div class="card-note">Renumbering changes interface numbering. Plan the operational impact before using it.</div>
+        <div class="command-header">
+          <code>switch 2 renumber 3</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Renumbers a stack member after reload.</p>
+      </article>
+
+      <h3 id="cisco-qos">QoS Quick Reference</h3>
+
+      <article class="command-card" data-search="cisco qos show policy-map interface class drops police shape">
+        <span class="card-badge">Verify</span>
+        
+        <div class="command-header">
+          <code>show policy-map interface GigabitEthernet1/0/1</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows QoS class statistics, drops, policing and shaping for an interface.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco qos class-map classification">
+        <span class="card-badge">Verify</span>
+        
+        <div class="command-header">
+          <code>show class-map</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Lists configured QoS class maps.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco qos policy-map policing shaping">
+        <span class="card-badge">Verify</span>
+        
+        <div class="command-header">
+          <code>show policy-map</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Lists configured QoS policy maps.</p>
+      </article>
+
+      <article class="command-card recipe-card" data-search="cisco qos mqc voice dscp ef class map policy map priority service policy">
+        <div class="recipe-title-row">
+          <span class="card-badge recipe-badge">Recipe</span>
+          <strong>Simple MQC voice-priority example</strong>
+        </div>
+        <div class="recipe-note warning">QoS syntax and hardware behavior differ substantially between router and Catalyst platforms.</div>
+        <div class="command-header">
+          <code>configure terminal
+class-map match-any VOICE
+ match dscp ef
+
+policy-map WAN-QOS
+ class VOICE
+  priority percent 20
+ class class-default
+  fair-queue
+
+interface GigabitEthernet0/0
+ service-policy output WAN-QOS
+
+end</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Illustrative MQC example that prioritizes EF-marked voice traffic.</p>
+      </article>
+
+      <h3>ACL & NAT Troubleshooting</h3>
+
+      <article class="command-card" data-search="cisco acl access list hit counters troubleshooting">
+        <span class="card-badge">Troubleshoot</span>
+        
+        <div class="command-header">
+          <code>show access-lists</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Checks ACL entries and hit counters.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco acl applied interface inbound outbound access group">
+        <span class="card-badge">Troubleshoot</span>
+        
+        <div class="command-header">
+          <code>show ip interface GigabitEthernet0/0</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows which IPv4 ACLs are applied inbound or outbound on the interface.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco nat translations verbose inside local global troubleshoot">
+        <span class="card-badge">Troubleshoot</span>
+        
+        <div class="command-header">
+          <code>show ip nat translations verbose</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows detailed NAT translation information on platforms supporting the verbose keyword.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco nat statistics pat overload troubleshoot">
+        <span class="card-badge">Troubleshoot</span>
+        
+        <div class="command-header">
+          <code>show ip nat statistics</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows NAT configuration and translation counters.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco clear nat translations flush pat">
+        <span class="card-badge">Troubleshoot</span>
+        <div class="card-note">Clearing translations can interrupt active sessions.</div>
+        <div class="command-header">
+          <code>clear ip nat translation *</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Clears dynamic NAT translations.</p>
+      </article>
+
+      <h3>STP & EtherChannel Troubleshooting</h3>
+
+      <article class="command-card" data-search="cisco stp inconsistent ports root guard loop guard troubleshoot">
+        <span class="card-badge">Troubleshoot</span>
+        
+        <div class="command-header">
+          <code>show spanning-tree inconsistentports</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Lists interfaces placed into an STP inconsistent state.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco spanning tree topology change occurrences troubleshooting filter">
+        <span class="card-badge">Troubleshoot</span>
+        
+        <div class="command-header">
+          <code>show spanning-tree detail | include ieee|occurr|from|is executing</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Useful filtered STP output for investigating topology changes on many IOS releases.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco lacp neighbor partner system id etherchannel troubleshoot">
+        <span class="card-badge">Troubleshoot</span>
+        
+        <div class="command-header">
+          <code>show lacp neighbor</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows LACP partner information.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco etherchannel port-channel detail troubleshoot">
+        <span class="card-badge">Troubleshoot</span>
+        
+        <div class="command-header">
+          <code>show etherchannel port-channel</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows detailed port-channel information on supported platforms.</p>
+      </article>
+
+      <h3>Hardware & Health</h3>
+
+      <article class="command-card" data-search="cisco inventory serial pid vid modules sfp">
+        <span class="card-badge">Inventory</span>
+        
+        <div class="command-header">
+          <code>show inventory</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Lists chassis/modules/transceivers with product IDs and serial numbers.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco environment temperature fan power health">
+        <span class="card-badge">Health</span>
+        
+        <div class="command-header">
+          <code>show environment all</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays environmental health such as temperature, fans and power supplies on supported platforms.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco cpu history utilization performance">
+        <span class="card-badge">Health</span>
+        
+        <div class="command-header">
+          <code>show processes cpu history</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays recent CPU utilization history.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco memory statistics used free health">
+        <span class="card-badge">Health</span>
+        
+        <div class="command-header">
+          <code>show memory statistics</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays memory statistics on supported IOS/IOS XE platforms.</p>
+      </article>
+
     </section>
+
+
+    <section id="windows-quick" class="command-section tool-section">
+      <h2>Windows Quick Access</h2>
+      <p class="section-description">Useful <kbd>Win</kbd> + <kbd>R</kbd> shortcuts and quick-launch commands for everyday network administration.</p>
+
+      <h3>Network & System</h3>
+
+      <article class="command-card " data-search="windows win r run ncpa cpl network connections adapters ipv4 properties">
+        <span class="card-badge">Win+R</span>
+        <div class="command-header">
+          <code>ncpa.cpl</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens Network Connections, where you can enable/disable adapters and edit IPv4/IPv6 properties.</p>
+      </article>
+
+      <article class="command-card " data-search="windows win r cmd command prompt terminal">
+        <span class="card-badge">Win+R</span>
+        <div class="command-header">
+          <code>cmd</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens Command Prompt.</p>
+      </article>
+
+      <article class="command-card " data-search="windows win r powershell terminal">
+        <span class="card-badge">Win+R</span>
+        <div class="command-header">
+          <code>powershell</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens Windows PowerShell.</p>
+      </article>
+
+      <article class="command-card " data-search="windows win r wt windows terminal">
+        <span class="card-badge">Win+R</span>
+        <div class="command-header">
+          <code>wt</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens Windows Terminal when installed.</p>
+      </article>
+
+      <article class="command-card " data-search="windows win r control control panel">
+        <span class="card-badge">Win+R</span>
+        <div class="command-header">
+          <code>control</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens Control Panel.</p>
+      </article>
+
+      <article class="command-card " data-search="windows run settings network internet ms-settings">
+        <span class="card-badge">Win+R</span>
+        <div class="command-header">
+          <code>ms-settings:network</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens the modern Windows Network & Internet settings page.</p>
+      </article>
+
+      <article class="command-card " data-search="windows win r sysdm cpl system properties computer name domain">
+        <span class="card-badge">Win+R</span>
+        <div class="command-header">
+          <code>sysdm.cpl</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens System Properties, including computer name/domain settings and advanced system settings.</p>
+      </article>
+
+      <article class="command-card " data-search="windows win r firewall cpl defender firewall">
+        <span class="card-badge">Win+R</span>
+        <div class="command-header">
+          <code>firewall.cpl</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens the basic Windows Defender Firewall Control Panel.</p>
+      </article>
+
+      <article class="command-card " data-search="windows win r wf msc firewall advanced rules">
+        <span class="card-badge">Win+R</span>
+        <div class="command-header">
+          <code>wf.msc</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens Windows Defender Firewall with Advanced Security.</p>
+      </article>
+
+      <article class="command-card " data-search="windows win r services msc services console">
+        <span class="card-badge">Win+R</span>
+        <div class="command-header">
+          <code>services.msc</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens the Services management console.</p>
+      </article>
+
+      <article class="command-card " data-search="windows win r event viewer eventvwr msc logs">
+        <span class="card-badge">Win+R</span>
+        <div class="command-header">
+          <code>eventvwr.msc</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens Event Viewer.</p>
+      </article>
+
+      <article class="command-card " data-search="windows win r device manager devmgmt network adapter driver">
+        <span class="card-badge">Win+R</span>
+        <div class="command-header">
+          <code>devmgmt.msc</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens Device Manager, useful for checking NIC drivers and hardware status.</p>
+      </article>
+
+      <article class="command-card " data-search="windows win r computer management compmgmt">
+        <span class="card-badge">Win+R</span>
+        <div class="command-header">
+          <code>compmgmt.msc</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens Computer Management.</p>
+      </article>
+
+      <article class="command-card " data-search="windows win r task manager taskmgr process performance">
+        <span class="card-badge">Win+R</span>
+        <div class="command-header">
+          <code>taskmgr</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens Task Manager.</p>
+      </article>
+
+      <article class="command-card " data-search="windows win r mstsc rdp remote desktop">
+        <span class="card-badge">Win+R</span>
+        <div class="command-header">
+          <code>mstsc</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens Remote Desktop Connection.</p>
+      </article>
+
+      <article class="command-card " data-search="windows run unc admin share c$ remote host smb">
+        <span class="card-badge">Run/Explorer</span>
+        <div class="command-header">
+          <code>\\HOSTNAME\c$</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens the administrative C$ share on a remote Windows host when permissions and firewall rules allow it.</p>
+      </article>
+
+      <h3>Administrative Consoles</h3>
+
+      <article class="command-card " data-search="windows win r mmc management console snapin">
+        <span class="card-badge">Win+R</span>
+        <div class="command-header">
+          <code>mmc</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens an empty Microsoft Management Console where snap-ins can be added.</p>
+      </article>
+
+      <article class="command-card " data-search="windows win r local users groups lusrmgr">
+        <span class="card-badge">Win+R</span>
+        <div class="command-header">
+          <code>lusrmgr.msc</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens Local Users and Groups on supported Windows editions.</p>
+      </article>
+
+      <article class="command-card " data-search="windows win r local security policy secpol">
+        <span class="card-badge">Win+R</span>
+        <div class="command-header">
+          <code>secpol.msc</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens Local Security Policy on supported Windows editions.</p>
+      </article>
+
+      <article class="command-card " data-search="windows win r group policy gpedit">
+        <span class="card-badge">Win+R</span>
+        <div class="command-header">
+          <code>gpedit.msc</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens Local Group Policy Editor on supported Windows editions.</p>
+      </article>
+
+      <article class="command-card " data-search="windows win r certificates local computer certlm tls">
+        <span class="card-badge">Win+R</span>
+        <div class="command-header">
+          <code>certlm.msc</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens the Local Computer certificate store.</p>
+      </article>
+
+      <article class="command-card " data-search="windows win r certificates current user certmgr">
+        <span class="card-badge">Win+R</span>
+        <div class="command-header">
+          <code>certmgr.msc</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens the Current User certificate store.</p>
+      </article>
+
+    </section>
+
 
     <!-- WINDOWS -->
     <section id="windows" class="command-section">
@@ -1304,6 +2682,293 @@ ip dhcp snooping vlan 10,20</code>
       </article>
 
     </section>
+
+
+    <!-- ==================================================================
+         WINDOWS / ACTIVE DIRECTORY / DNS / KERBEROS
+         ================================================================== -->
+    <section id="windows-ad" class="command-section">
+      <h2>Windows AD / DNS / Kerberos</h2>
+      <p class="section-description">
+        Domain discovery, secure-channel, Kerberos, Group Policy, DNS, time and SMB troubleshooting.
+      </p>
+
+      <h3>Domain & Secure Channel</h3>
+
+      <article class="command-card" data-search="windows nltest dsgetdc domain controller discovery active directory">
+        <span class="card-badge">CMD</span>
+        
+        <div class="command-header">
+          <code>nltest /dsgetdc:example.local</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Locates a domain controller for the specified Active Directory domain.</p>
+      </article>
+
+      <article class="command-card" data-search="windows nltest dclist domain controllers active directory">
+        <span class="card-badge">CMD</span>
+        
+        <div class="command-header">
+          <code>nltest /dclist:example.local</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Lists domain controllers known for the specified domain.</p>
+      </article>
+
+      <article class="command-card" data-search="windows nltest secure channel verify domain trust">
+        <span class="card-badge">CMD</span>
+        
+        <div class="command-header">
+          <code>nltest /sc_verify:example.local</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Verifies the workstation's secure channel with the domain.</p>
+      </article>
+
+      <article class="command-card" data-search="powershell test computer secure channel domain trust">
+        <span class="card-badge">PowerShell</span>
+        
+        <div class="command-header">
+          <code>Test-ComputerSecureChannel -Verbose</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Tests the local computer's domain secure channel.</p>
+      </article>
+
+      <article class="command-card" data-search="powershell repair secure channel domain trust credential">
+        <span class="card-badge">PowerShell</span>
+        <div class="card-note">Use only with appropriate privileges and after confirming a secure-channel problem.</div>
+        <div class="command-header">
+          <code>Test-ComputerSecureChannel -Repair -Credential (Get-Credential)</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Attempts to repair a broken workstation-domain secure channel.</p>
+      </article>
+
+      <h3>Kerberos</h3>
+
+      <article class="command-card" data-search="windows kerberos klist tickets cache tgt tgs">
+        <span class="card-badge">CMD</span>
+        
+        <div class="command-header">
+          <code>klist</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays Kerberos tickets cached in the current logon session.</p>
+      </article>
+
+      <article class="command-card" data-search="windows kerberos klist tgt ticket granting">
+        <span class="card-badge">CMD</span>
+        
+        <div class="command-header">
+          <code>klist tgt</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays the current Ticket Granting Ticket.</p>
+      </article>
+
+      <article class="command-card" data-search="windows kerberos klist purge cache reauthenticate">
+        <span class="card-badge">CMD</span>
+        <div class="card-note">Applications may need to reconnect and obtain new tickets afterward.</div>
+        <div class="command-header">
+          <code>klist purge</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Purges Kerberos tickets from the current logon session.</p>
+      </article>
+
+      <h3>Group Policy</h3>
+
+      <article class="command-card" data-search="windows gpresult group policy gpo rsop">
+        <span class="card-badge">CMD</span>
+        
+        <div class="command-header">
+          <code>gpresult /r</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows a summary of Group Policy applied to the current computer and user.</p>
+      </article>
+
+      <article class="command-card" data-search="windows gpresult html group policy report">
+        <span class="card-badge">CMD</span>
+        
+        <div class="command-header">
+          <code>gpresult /h gpresult.html</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Creates a detailed HTML Group Policy report.</p>
+      </article>
+
+      <article class="command-card" data-search="windows gpupdate force group policy refresh">
+        <span class="card-badge">CMD</span>
+        
+        <div class="command-header">
+          <code>gpupdate /force</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Forces a computer and user Group Policy refresh.</p>
+      </article>
+
+      <article class="command-card" data-search="windows run rsop msc resultant set policy gpo">
+        <span class="card-badge">Win+R</span>
+        
+        <div class="command-header">
+          <code>rsop.msc</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Opens Resultant Set of Policy.</p>
+      </article>
+
+      <h3>Time / NTP</h3>
+
+      <article class="command-card" data-search="windows w32tm ntp time status kerberos clock skew">
+        <span class="card-badge">CMD</span>
+        
+        <div class="command-header">
+          <code>w32tm /query /status</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows Windows Time synchronization state, source, stratum and offset.</p>
+      </article>
+
+      <article class="command-card" data-search="windows w32tm source ntp domain controller">
+        <span class="card-badge">CMD</span>
+        
+        <div class="command-header">
+          <code>w32tm /query /source</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays the current Windows time source.</p>
+      </article>
+
+      <article class="command-card" data-search="windows w32tm peers ntp">
+        <span class="card-badge">CMD</span>
+        
+        <div class="command-header">
+          <code>w32tm /query /peers</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Lists configured/discovered Windows Time peers.</p>
+      </article>
+
+      <article class="command-card" data-search="windows w32tm resync ntp kerberos time">
+        <span class="card-badge">CMD</span>
+        
+        <div class="command-header">
+          <code>w32tm /resync</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Requests immediate time synchronization.</p>
+      </article>
+
+      <h3>AD DNS / SRV</h3>
+
+      <article class="command-card" data-search="windows dns srv ldap dc msdcs active directory">
+        <span class="card-badge">CMD</span>
+        
+        <div class="command-header">
+          <code>nslookup -type=SRV _ldap._tcp.dc._msdcs.example.local</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Queries domain-controller LDAP SRV records.</p>
+      </article>
+
+      <article class="command-card" data-search="powershell resolve dns srv ldap active directory">
+        <span class="card-badge">PowerShell</span>
+        
+        <div class="command-header">
+          <code>Resolve-DnsName _ldap._tcp.dc._msdcs.example.local -Type SRV</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Queries AD domain-controller SRV records from PowerShell.</p>
+      </article>
+
+      <article class="command-card" data-search="powershell dns kerberos srv active directory">
+        <span class="card-badge">PowerShell</span>
+        
+        <div class="command-header">
+          <code>Resolve-DnsName _kerberos._tcp.example.local -Type SRV</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Queries Kerberos service-location records.</p>
+      </article>
+
+      <h3>SMB / Shares</h3>
+
+      <article class="command-card" data-search="windows net use smb shares mapped drives">
+        <span class="card-badge">CMD</span>
+        
+        <div class="command-header">
+          <code>net use</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Lists current SMB connections and mapped drives.</p>
+      </article>
+
+      <article class="command-card" data-search="windows net use smb share credentials domain">
+        <span class="card-badge">CMD</span>
+        
+        <div class="command-header">
+          <code>net use \\server\share /user:DOMAIN\user *</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Connects to an SMB share using explicit domain credentials and prompts for the password.</p>
+      </article>
+
+      <article class="command-card" data-search="windows net use smb delete share connection">
+        <span class="card-badge">CMD</span>
+        
+        <div class="command-header">
+          <code>net use \\server\share /delete</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Removes an SMB connection.</p>
+      </article>
+
+      <article class="command-card" data-search="powershell smb connections dialect server">
+        <span class="card-badge">PowerShell</span>
+        
+        <div class="command-header">
+          <code>Get-SmbConnection</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows active SMB client connections and negotiated dialect.</p>
+      </article>
+
+      <h3>AD PowerShell (RSAT / ActiveDirectory module)</h3>
+
+      <article class="command-card" data-search="powershell active directory get addomaincontroller rsat">
+        <span class="card-badge">PowerShell</span>
+        
+        <div class="command-header">
+          <code>Get-ADDomainController -Filter *</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Lists domain controllers when the ActiveDirectory PowerShell module is installed.</p>
+      </article>
+
+      <article class="command-card" data-search="powershell get aduser enabled lockedout password last logon">
+        <span class="card-badge">PowerShell</span>
+        
+        <div class="command-header">
+          <code>Get-ADUser &lt;USERNAME&gt; -Properties Enabled,LockedOut,PasswordLastSet,LastLogonDate</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows useful AD user-account state properties.</p>
+      </article>
+
+      <article class="command-card" data-search="powershell get adcomputer last logon operating system">
+        <span class="card-badge">PowerShell</span>
+        
+        <div class="command-header">
+          <code>Get-ADComputer &lt;COMPUTERNAME&gt; -Properties LastLogonDate,OperatingSystem</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows useful AD computer-object properties.</p>
+      </article>
+
+    </section>
+
 
     <!-- POWERSHELL -->
     <section id="powershell" class="command-section">
@@ -1923,6 +3588,332 @@ ip dhcp snooping vlan 10,20</code>
 
     </section>
 
+
+    <!-- ==================================================================
+         WIRESHARK & PACKET CAPTURE
+         ================================================================== -->
+    <section id="wireshark" class="command-section">
+      <h2>Wireshark & Packet Capture</h2>
+      <p class="section-description">
+        High-value display filters, capture filters and troubleshooting patterns.
+        Wireshark display filters and BPF capture filters use different syntax.
+      </p>
+
+      <h3>Display Filters — Hosts / Ports</h3>
+
+      <article class="command-card" data-search="wireshark display filter ip address host">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>ip.addr == 10.0.0.10</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows IPv4 packets where the address is either source or destination.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark display filter source src ip">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>ip.src == 10.0.0.10</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows packets sourced from the specified IPv4 address.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark display filter destination dst ip">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>ip.dst == 10.0.0.10</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows packets destined to the specified IPv4 address.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark display filter tcp port https">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>tcp.port == 443</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows TCP packets using port 443 in either direction.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark display filter tcp stream conversation follow">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>tcp.stream eq 5</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows one TCP conversation by stream index.</p>
+      </article>
+
+      <h3>DNS / DHCP / ARP</h3>
+
+      <article class="command-card" data-search="wireshark dns queries responses display filter">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>dns</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows DNS traffic.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark dns query request">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>dns.flags.response == 0</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows DNS queries.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark dns response">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>dns.flags.response == 1</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows DNS responses.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark dns error rcode nxdomain servfail">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>dns.flags.rcode != 0</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows DNS errors such as NXDOMAIN or SERVFAIL responses.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark dhcp bootp discover offer request ack">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>dhcp || bootp</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows DHCP/BOOTP traffic; dissector naming depends on Wireshark version.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark arp request reply ip mac">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>arp</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows ARP requests and replies.</p>
+      </article>
+
+      <h3>TCP Troubleshooting</h3>
+
+      <article class="command-card" data-search="wireshark tcp syn handshake connection attempt">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>tcp.flags.syn == 1 &amp;&amp; tcp.flags.ack == 0</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows initial TCP SYN connection attempts.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark tcp reset rst refused">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>tcp.flags.reset == 1</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows TCP resets.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark tcp retransmission loss">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>tcp.analysis.retransmission</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows segments Wireshark classifies as retransmissions.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark tcp fast retransmission">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>tcp.analysis.fast_retransmission</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows TCP fast retransmissions.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark tcp duplicate ack packet loss">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>tcp.analysis.duplicate_ack</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows duplicate TCP acknowledgements.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark tcp zero window receiver performance">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>tcp.analysis.zero_window</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows TCP zero-window conditions.</p>
+      </article>
+
+      <h3>ICMP / VLAN / L2 Discovery</h3>
+
+      <article class="command-card" data-search="wireshark icmp ping unreachable ttl">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>icmp</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows IPv4 ICMP traffic.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark icmp type 3 destination unreachable">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>icmp.type == 3</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows ICMP Destination Unreachable messages.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark vlan id 802.1q tagged">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>vlan.id == 10</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows tagged frames for VLAN 10.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark stp spanning tree bpdu">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>stp</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows Spanning Tree BPDUs.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark lldp neighbors discovery">
+        <span class="card-badge">Display</span>
+        
+        <div class="command-header">
+          <code>lldp</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows LLDP frames.</p>
+      </article>
+
+      <h3>BPF Capture Filters</h3>
+
+      <article class="command-card" data-search="wireshark capture filter bpf host">
+        <span class="card-badge">Capture</span>
+        
+        <div class="command-header">
+          <code>host 10.0.0.10</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Captures traffic to or from one host.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark capture filter bpf net subnet cidr">
+        <span class="card-badge">Capture</span>
+        
+        <div class="command-header">
+          <code>net 10.0.0.0/24</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Captures traffic to or from a network.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark capture filter bpf tcp port">
+        <span class="card-badge">Capture</span>
+        
+        <div class="command-header">
+          <code>tcp port 443</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Captures TCP port 443 traffic.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark capture filter bpf udp dns 53">
+        <span class="card-badge">Capture</span>
+        
+        <div class="command-header">
+          <code>udp port 53</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Captures UDP DNS traffic.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark capture filter exclude ssh not port">
+        <span class="card-badge">Capture</span>
+        
+        <div class="command-header">
+          <code>host 10.0.0.10 and not port 22</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Captures one host while excluding SSH.</p>
+      </article>
+
+      <h3>Troubleshooting Combos</h3>
+
+      <article class="command-card" data-search="wireshark troubleshooting client arp dhcp dns">
+        <span class="card-badge">Pattern</span>
+        
+        <div class="command-header">
+          <code>arp || dhcp || dns</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Good first-pass display filter for a client that cannot obtain or use normal IP connectivity.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark troubleshooting tcp loss retransmission duplicate ack">
+        <span class="card-badge">Pattern</span>
+        
+        <div class="command-header">
+          <code>tcp.analysis.retransmission || tcp.analysis.fast_retransmission || tcp.analysis.duplicate_ack</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Surfaces common TCP packet-loss/recovery indicators.</p>
+      </article>
+
+      <article class="command-card" data-search="wireshark troubleshooting dns reset icmp">
+        <span class="card-badge">Pattern</span>
+        
+        <div class="command-header">
+          <code>dns || tcp.flags.reset == 1 || icmp</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Broad filter for name-resolution failures, TCP resets and Layer 3 error signals.</p>
+      </article>
+
+    </section>
+
+
     <!-- NETWORKING -->
     <section id="networking" class="command-section">
       <h2>Networking Reference</h2>
@@ -2219,6 +4210,218 @@ ip dhcp snooping vlan 10,20</code>
 
     </section>
 
+
+    <section id="ipv4" class="command-section tool-section">
+      <h2>IPv4 Cheat Sheet & Subnet Calculator</h2>
+      <p class="section-description">
+        Address ranges, subnet sizes, CIDR/VLSM reminders and an offline calculator that runs entirely in your browser.
+      </p>
+
+      <div class="ipv4-grid">
+        <div class="reference-panel">
+          <h3>Special & Private Ranges</h3>
+          <div class="reference-table-wrap">
+            <table class="reference-table">
+              <thead><tr><th>Range</th><th>Purpose</th><th>Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>10.0.0.0/8</code></td><td>RFC1918 private</td><td>10.0.0.0–10.255.255.255</td></tr>
+                <tr><td><code>172.16.0.0/12</code></td><td>RFC1918 private</td><td>172.16.0.0–172.31.255.255</td></tr>
+                <tr><td><code>192.168.0.0/16</code></td><td>RFC1918 private</td><td>192.168.0.0–192.168.255.255</td></tr>
+                <tr><td><code>127.0.0.0/8</code></td><td>Loopback</td><td><code>127.0.0.1</code> is the common localhost address</td></tr>
+                <tr><td><code>169.254.0.0/16</code></td><td>IPv4 link-local</td><td>Often called APIPA on Windows</td></tr>
+                <tr><td><code>100.64.0.0/10</code></td><td>Shared address space</td><td>Commonly used for carrier-grade NAT</td></tr>
+                <tr><td><code>224.0.0.0/4</code></td><td>Multicast</td><td>224.0.0.0–239.255.255.255</td></tr>
+                <tr><td><code>0.0.0.0/0</code></td><td>Default route</td><td>Matches any IPv4 destination</td></tr>
+                <tr><td><code>255.255.255.255/32</code></td><td>Limited broadcast</td><td>Local-segment broadcast</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="reference-panel">
+          <h3>Classful Ranges (Historical)</h3>
+          <div class="reference-table-wrap">
+            <table class="reference-table">
+              <thead><tr><th>Class</th><th>First octet</th><th>Default mask</th></tr></thead>
+              <tbody>
+                <tr><td>A</td><td>1–126</td><td><code>/8</code> — 255.0.0.0</td></tr>
+                <tr><td>B</td><td>128–191</td><td><code>/16</code> — 255.255.0.0</td></tr>
+                <tr><td>C</td><td>192–223</td><td><code>/24</code> — 255.255.255.0</td></tr>
+                <tr><td>D</td><td>224–239</td><td>Multicast</td></tr>
+                <tr><td>E</td><td>240–255</td><td>Reserved/experimental</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="reference-note">Classful networking is historical. Modern networks use CIDR prefixes.</p>
+        </div>
+      </div>
+
+      <div class="concept-grid">
+        <article class="concept-card">
+          <h3>CIDR</h3>
+          <p><strong>Classless Inter-Domain Routing</strong> expresses a network as a prefix such as <code>192.168.10.0/24</code>. The prefix length tells you how many leading bits belong to the network.</p>
+        </article>
+        <article class="concept-card">
+          <h3>VLSM</h3>
+          <p><strong>Variable Length Subnet Masking</strong> means using different prefix lengths inside an address plan, e.g. a <code>/25</code> for users, <code>/28</code> for servers and <code>/30</code> for a point-to-point link.</p>
+        </article>
+        <article class="concept-card">
+          <h3>CIDR vs VLSM</h3>
+          <p>CIDR is the classless addressing/routing notation and aggregation concept; VLSM is the design practice of subnetting a block into differently sized subnets.</p>
+        </article>
+      </div>
+
+      <h3 id="subnet-sizes">Subnet Size Table</h3>
+      <div class="reference-table-wrap">
+        <table class="reference-table subnet-table">
+          <thead>
+            <tr><th>CIDR</th><th>Subnet Mask</th><th>Total addresses</th><th>Traditional usable hosts</th><th>Increment</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>/8</td><td>255.0.0.0</td><td>16,777,216</td><td>16,777,214</td><td>1 in 1st octet</td></tr>
+            <tr><td>/9</td><td>255.128.0.0</td><td>8,388,608</td><td>8,388,606</td><td>128 in 2nd</td></tr>
+            <tr><td>/10</td><td>255.192.0.0</td><td>4,194,304</td><td>4,194,302</td><td>64 in 2nd</td></tr>
+            <tr><td>/11</td><td>255.224.0.0</td><td>2,097,152</td><td>2,097,150</td><td>32 in 2nd</td></tr>
+            <tr><td>/12</td><td>255.240.0.0</td><td>1,048,576</td><td>1,048,574</td><td>16 in 2nd</td></tr>
+            <tr><td>/13</td><td>255.248.0.0</td><td>524,288</td><td>524,286</td><td>8 in 2nd</td></tr>
+            <tr><td>/14</td><td>255.252.0.0</td><td>262,144</td><td>262,142</td><td>4 in 2nd</td></tr>
+            <tr><td>/15</td><td>255.254.0.0</td><td>131,072</td><td>131,070</td><td>2 in 2nd</td></tr>
+            <tr><td>/16</td><td>255.255.0.0</td><td>65,536</td><td>65,534</td><td>1 in 2nd</td></tr>
+            <tr><td>/17</td><td>255.255.128.0</td><td>32,768</td><td>32,766</td><td>128 in 3rd</td></tr>
+            <tr><td>/18</td><td>255.255.192.0</td><td>16,384</td><td>16,382</td><td>64 in 3rd</td></tr>
+            <tr><td>/19</td><td>255.255.224.0</td><td>8,192</td><td>8,190</td><td>32 in 3rd</td></tr>
+            <tr><td>/20</td><td>255.255.240.0</td><td>4,096</td><td>4,094</td><td>16 in 3rd</td></tr>
+            <tr><td>/21</td><td>255.255.248.0</td><td>2,048</td><td>2,046</td><td>8 in 3rd</td></tr>
+            <tr><td>/22</td><td>255.255.252.0</td><td>1,024</td><td>1,022</td><td>4 in 3rd</td></tr>
+            <tr><td>/23</td><td>255.255.254.0</td><td>512</td><td>510</td><td>2 in 3rd</td></tr>
+            <tr><td>/24</td><td>255.255.255.0</td><td>256</td><td>254</td><td>1 in 3rd</td></tr>
+            <tr><td>/25</td><td>255.255.255.128</td><td>128</td><td>126</td><td>128 in 4th</td></tr>
+            <tr><td>/26</td><td>255.255.255.192</td><td>64</td><td>62</td><td>64 in 4th</td></tr>
+            <tr><td>/27</td><td>255.255.255.224</td><td>32</td><td>30</td><td>32 in 4th</td></tr>
+            <tr><td>/28</td><td>255.255.255.240</td><td>16</td><td>14</td><td>16 in 4th</td></tr>
+            <tr><td>/29</td><td>255.255.255.248</td><td>8</td><td>6</td><td>8 in 4th</td></tr>
+            <tr><td>/30</td><td>255.255.255.252</td><td>4</td><td>2</td><td>4 in 4th</td></tr>
+            <tr><td>/31</td><td>255.255.255.254</td><td>2</td><td>2 on RFC 3021 P2P</td><td>2 in 4th</td></tr>
+            <tr><td>/32</td><td>255.255.255.255</td><td>1</td><td>1 host route</td><td>1 in 4th</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div id="subnet-calculator" class="calculator-panel">
+        <div class="calculator-heading">
+          <div>
+            <h3>IPv4 Subnet Calculator</h3>
+            <p>Enter an IPv4 address and either CIDR prefix or dotted-decimal mask.</p>
+          </div>
+          <button id="calc-example" class="secondary-btn" type="button">Example</button>
+        </div>
+
+        <div class="calculator-form">
+          <label>
+            IP address
+            <input id="calc-ip" type="text" value="192.168.10.123" placeholder="192.168.10.123" spellcheck="false">
+          </label>
+          <label>
+            CIDR / mask
+            <input id="calc-mask" type="text" value="/24" placeholder="/24 or 255.255.255.0" spellcheck="false">
+          </label>
+          <button id="calc-button" class="calc-btn" type="button">Calculate</button>
+        </div>
+
+        <div id="calc-error" class="calc-error" hidden></div>
+
+        <div id="calc-results" class="calc-results">
+          <div><span>Network</span><strong id="result-network">—</strong></div>
+          <div><span>Broadcast</span><strong id="result-broadcast">—</strong></div>
+          <div><span>Subnet mask</span><strong id="result-mask">—</strong></div>
+          <div><span>Wildcard mask</span><strong id="result-wildcard">—</strong></div>
+          <div><span>CIDR</span><strong id="result-cidr">—</strong></div>
+          <div><span>First usable</span><strong id="result-first">—</strong></div>
+          <div><span>Last usable</span><strong id="result-last">—</strong></div>
+          <div><span>Total addresses</span><strong id="result-total">—</strong></div>
+          <div><span>Usable hosts</span><strong id="result-usable">—</strong></div>
+          <div><span>IP type</span><strong id="result-type">—</strong></div>
+          <div><span>IP as integer</span><strong id="result-integer">—</strong></div>
+          <div><span>Binary mask</span><strong id="result-binary">—</strong></div>
+        </div>
+      </div>
+      <!-- ================================================================
+           VLSM CALCULATOR
+           Edit labels/layout here; calculation logic lives in script.js.
+           ================================================================ -->
+      <div id="vlsm-calculator" class="calculator-panel vlsm-panel">
+        <div class="calculator-heading">
+          <div>
+            <h3>VLSM Calculator</h3>
+            <p>
+              Enter a parent IPv4 network and required host counts. The calculator
+              allocates the largest subnets first and chooses the smallest prefix
+              that fits each requirement.
+            </p>
+          </div>
+          <button id="vlsm-example" class="secondary-btn" type="button">Example</button>
+        </div>
+
+        <div class="calculator-form vlsm-form">
+          <label>
+            Parent network
+            <input
+              id="vlsm-network"
+              type="text"
+              value="10.10.0.0/16"
+              placeholder="10.10.0.0/16"
+              spellcheck="false"
+            >
+          </label>
+
+          <label class="vlsm-hosts-label">
+            Required hosts
+            <input
+              id="vlsm-hosts"
+              type="text"
+              value="500, 200, 50, 20"
+              placeholder="500, 200, 50, 20"
+              spellcheck="false"
+            >
+          </label>
+
+          <button id="vlsm-button" class="calc-btn" type="button">Allocate</button>
+        </div>
+
+        <div class="tool-help">
+          Example: <code>500, 200, 50, 20</code>. Spaces and semicolons also work.
+          Host counts represent traditional usable LAN host requirements.
+        </div>
+
+        <div id="vlsm-error" class="calc-error" hidden></div>
+
+        <div class="reference-table-wrap">
+          <table class="reference-table vlsm-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Requested hosts</th>
+                <th>Network</th>
+                <th>Mask</th>
+                <th>Usable range</th>
+                <th>Broadcast</th>
+                <th>Capacity</th>
+              </tr>
+            </thead>
+            <tbody id="vlsm-results">
+              <tr>
+                <td colspan="7">Enter requirements and click Allocate.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="vlsm-summary" class="vlsm-summary"></div>
+      </div>
+
+    </section>
+
+
     <div id="no-results" class="no-results" hidden>
       No matching commands found.
     </div>
@@ -2227,83 +4430,6 @@ ip dhcp snooping vlan 10,20</code>
   <footer class="footer">
     <p>NECS — Network Engineer's Cheat Sheet</p>
   </footer>
-
-  <script>
-    const searchInput = document.getElementById('search');
-    const cards = [...document.querySelectorAll('.command-card')];
-    const sections = [...document.querySelectorAll('.command-section')];
-    const noResults = document.getElementById('no-results');
-    const resultCount = document.getElementById('result-count');
-
-    function normalize(value) {
-      return value.toLowerCase().trim();
-    }
-
-    function filterCommands() {
-      const query = normalize(searchInput.value);
-      let visibleCards = 0;
-
-      cards.forEach(card => {
-        const searchableText = normalize(
-          card.innerText + ' ' + (card.dataset.search || '')
-        );
-
-        const matches = !query || searchableText.includes(query);
-        card.hidden = !matches;
-
-        if (matches) visibleCards++;
-      });
-
-      sections.forEach(section => {
-        const visibleInSection = section.querySelectorAll('.command-card:not([hidden])').length;
-        section.hidden = query !== '' && visibleInSection === 0;
-
-        section.querySelectorAll('h3').forEach(heading => {
-          let sibling = heading.nextElementSibling;
-          let hasVisibleCard = false;
-
-          while (sibling && sibling.tagName !== 'H3') {
-            if (sibling.classList.contains('command-card') && !sibling.hidden) {
-              hasVisibleCard = true;
-              break;
-            }
-            sibling = sibling.nextElementSibling;
-          }
-
-          heading.hidden = query !== '' && !hasVisibleCard;
-        });
-      });
-
-      noResults.hidden = visibleCards !== 0 || query === '';
-      resultCount.textContent = query ? `${visibleCards} result${visibleCards === 1 ? '' : 's'}` : '';
-    }
-
-    searchInput.addEventListener('input', filterCommands);
-
-    document.querySelectorAll('.copy-btn').forEach(button => {
-      button.addEventListener('click', async () => {
-        const code = button.closest('.command-header').querySelector('code').innerText;
-
-        try {
-          await navigator.clipboard.writeText(code);
-          const previous = button.textContent;
-          button.textContent = 'Copied';
-          setTimeout(() => button.textContent = previous, 1200);
-        } catch {
-          button.textContent = 'Copy failed';
-          setTimeout(() => button.textContent = 'Copy', 1200);
-        }
-      });
-    });
-
-    document.querySelectorAll('a[href^="#"]').forEach(link => {
-      link.addEventListener('click', () => {
-        if (searchInput.value) {
-          searchInput.value = '';
-          filterCommands();
-        }
-      });
-    });
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
