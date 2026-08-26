@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Network Engineer's Cheat Sheet - Cisco, Windows, PowerShell, Linux and networking commands.">
+  <title>NECS — Network Engineer's Cheat Sheet</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#top">NECS</a>
+
+      <nav class="nav" aria-label="Main navigation">
+        <a href="#cisco">Cisco</a>
+        <a href="#windows">Windows</a>
+        <a href="#powershell">PowerShell</a>
+        <a href="#linux">Linux</a>
+        <a href="#networking">Networking</a>
+      </nav>
+
+      <div class="search-wrap">
+        <input
+          id="search"
+          type="search"
+          placeholder="Search commands or descriptions..."
+          autocomplete="off"
+          aria-label="Search commands"
+        >
+        <span id="result-count" class="result-count"></span>
+      </div>
+    </div>
+  </header>
+
+  <main id="top" class="container">
+    <section class="hero">
+      <h1>Network Engineer's Cheat Sheet</h1>
+      <p>
+        Quick reference for Cisco IOS, Windows, PowerShell, Linux and common networking tools.
+        Use the search bar above or press <kbd>Ctrl</kbd> + <kbd>F</kbd>.
+      </p>
+    </section>
+
+    <!-- CISCO -->
+    <section id="cisco" class="command-section">
+      <h2>Cisco IOS</h2>
+      <p class="section-description">Common Cisco IOS commands for switching, routing and troubleshooting.</p>
+
+      <h3>General & Device Information</h3>
+
+      <article class="command-card" data-search="cisco show version ios device model serial uptime software hardware information">
+        <div class="command-header">
+          <code>show version</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays IOS version, device model, uptime, hardware information, configuration register and image filename.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco show running-config running configuration current config">
+        <div class="command-header">
+          <code>show running-config</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays the currently active configuration stored in RAM.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco show startup-config startup configuration nvram boot config">
+        <div class="command-header">
+          <code>show startup-config</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays the saved configuration that will be loaded after the next reboot.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco copy running-config startup-config save configuration write memory wr">
+        <div class="command-header">
+          <code>copy running-config startup-config</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Saves the current running configuration to startup configuration.</p>
+      </article>
+
+      <h3>Interfaces</h3>
+
+      <article class="command-card" data-search="cisco show ip interface brief interfaces status ip addresses up down administratively down">
+        <div class="command-header">
+          <code>show ip interface brief</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows a compact overview of interfaces, assigned IP addresses and line/protocol status.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco show interfaces status switch ports speed duplex vlan status">
+        <div class="command-header">
+          <code>show interfaces status</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows switch port status, VLAN assignment, duplex, speed and media type.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco show interfaces counters errors crc drops collisions input output errors">
+        <div class="command-header">
+          <code>show interfaces counters errors</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays interface error counters such as CRC errors, collisions and packet drops.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco interface configuration mode gigabitethernet port configure terminal">
+        <div class="command-header">
+          <code>configure terminal
+interface GigabitEthernet1/0/1</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Enters global configuration mode and then interface configuration mode for a specific port.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco no shutdown enable interface port administratively down">
+        <div class="command-header">
+          <code>no shutdown</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Administratively enables an interface.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco shutdown disable interface port">
+        <div class="command-header">
+          <code>shutdown</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Administratively disables an interface.</p>
+      </article>
+
+      <h3>VLANs & Switching</h3>
+
+      <article class="command-card" data-search="cisco show vlan brief vlan list ports switching">
+        <div class="command-header">
+          <code>show vlan brief</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Lists configured VLANs and shows which access ports belong to each VLAN.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco vlan create name configure terminal">
+        <div class="command-header">
+          <code>configure terminal
+vlan 10
+name USERS</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Creates VLAN 10 and assigns it the name USERS.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco access port vlan switchport mode access switchport access vlan">
+        <div class="command-header">
+          <code>interface GigabitEthernet1/0/1
+switchport mode access
+switchport access vlan 10</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Configures an interface as an access port and assigns it to VLAN 10.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco trunk switchport mode trunk allowed vlan 802.1q tagged">
+        <div class="command-header">
+          <code>interface GigabitEthernet1/0/24
+switchport mode trunk
+switchport trunk allowed vlan 10,20,30</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Configures a trunk port and permits only VLANs 10, 20 and 30 across the trunk.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco show interfaces trunk trunking vlans native vlan allowed">
+        <div class="command-header">
+          <code>show interfaces trunk</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows trunk interfaces, native VLANs and VLANs allowed or forwarding on each trunk.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco show mac address-table mac table switching learned addresses">
+        <div class="command-header">
+          <code>show mac address-table</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays MAC addresses learned by the switch and the ports/VLANs associated with them.</p>
+      </article>
+
+      <h3>Spanning Tree</h3>
+
+      <article class="command-card" data-search="cisco spanning tree stp show spanning-tree root bridge blocked forwarding">
+        <div class="command-header">
+          <code>show spanning-tree</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays Spanning Tree Protocol information including root bridge, port roles and port states.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco spanning tree vlan root stp vlan">
+        <div class="command-header">
+          <code>show spanning-tree vlan 10</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays STP information specifically for VLAN 10.</p>
+      </article>
+
+      <h3>Routing</h3>
+
+      <article class="command-card" data-search="cisco show ip route routing table routes connected static ospf default gateway">
+        <div class="command-header">
+          <code>show ip route</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays the IPv4 routing table and the source of each route.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco static route ip route next hop default route">
+        <div class="command-header">
+          <code>ip route 192.168.20.0 255.255.255.0 10.0.0.2</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Adds a static route to 192.168.20.0/24 using 10.0.0.2 as the next-hop router.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco default route gateway of last resort static route 0.0.0.0">
+        <div class="command-header">
+          <code>ip route 0.0.0.0 0.0.0.0 10.0.0.1</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Configures a default IPv4 route through next-hop address 10.0.0.1.</p>
+      </article>
+
+      <h3>Troubleshooting</h3>
+
+      <article class="command-card" data-search="cisco ping connectivity icmp troubleshoot">
+        <div class="command-header">
+          <code>ping 8.8.8.8</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Tests basic IP connectivity to a remote host using ICMP echo requests.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco traceroute path hops routing troubleshoot">
+        <div class="command-header">
+          <code>traceroute 8.8.8.8</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows the Layer 3 path and intermediate hops toward a destination.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco show cdp neighbors detail neighbor switch router ip port cdp">
+        <div class="command-header">
+          <code>show cdp neighbors detail</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows detailed information about directly connected Cisco devices discovered through CDP.</p>
+      </article>
+
+      <article class="command-card" data-search="cisco show lldp neighbors detail neighbor vendor switch router lldp">
+        <div class="command-header">
+          <code>show lldp neighbors detail</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows detailed information about directly connected devices discovered through LLDP.</p>
+      </article>
+    </section>
+
+    <!-- WINDOWS -->
+    <section id="windows" class="command-section">
+      <h2>Windows CMD</h2>
+      <p class="section-description">Useful Windows Command Prompt commands for network diagnostics and system administration.</p>
+
+      <article class="command-card" data-search="windows cmd ipconfig all ip address dns gateway dhcp adapter mac">
+        <div class="command-header">
+          <code>ipconfig /all</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays detailed IP configuration for all network adapters, including DNS, DHCP, gateway and MAC address information.</p>
+      </article>
+
+      <article class="command-card" data-search="windows cmd ipconfig release dhcp lease disconnect renew">
+        <div class="command-header">
+          <code>ipconfig /release</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Releases the current DHCP-assigned IPv4 address.</p>
+      </article>
+
+      <article class="command-card" data-search="windows cmd ipconfig renew dhcp lease obtain address">
+        <div class="command-header">
+          <code>ipconfig /renew</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Requests a new IPv4 lease from the DHCP server.</p>
+      </article>
+
+      <article class="command-card" data-search="windows cmd ipconfig flushdns clear dns cache resolver">
+        <div class="command-header">
+          <code>ipconfig /flushdns</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Clears the local DNS resolver cache.</p>
+      </article>
+
+      <article class="command-card" data-search="windows cmd ping icmp connectivity latency packet loss">
+        <div class="command-header">
+          <code>ping 8.8.8.8</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Tests network reachability and reports round-trip latency and packet loss.</p>
+      </article>
+
+      <article class="command-card" data-search="windows cmd tracert traceroute route path hops">
+        <div class="command-header">
+          <code>tracert 8.8.8.8</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays the network path and intermediate routers toward a destination.</p>
+      </article>
+
+      <article class="command-card" data-search="windows cmd nslookup dns lookup resolve hostname ip">
+        <div class="command-header">
+          <code>nslookup example.com</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Queries DNS to resolve a hostname or IP address.</p>
+      </article>
+
+      <article class="command-card" data-search="windows cmd netstat ano ports connections listening pid tcp udp">
+        <div class="command-header">
+          <code>netstat -ano</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows active TCP/UDP connections and listening ports together with process IDs.</p>
+      </article>
+
+      <article class="command-card" data-search="windows cmd route print routing table routes gateway interface">
+        <div class="command-header">
+          <code>route print</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays the local IPv4 and IPv6 routing tables.</p>
+      </article>
+
+      <article class="command-card" data-search="windows cmd arp a arp cache mac ip mapping">
+        <div class="command-header">
+          <code>arp -a</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays the local ARP cache containing IPv4-to-MAC address mappings.</p>
+      </article>
+
+      <article class="command-card" data-search="windows cmd hostname computer name machine name">
+        <div class="command-header">
+          <code>hostname</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays the computer's hostname.</p>
+      </article>
+
+      <article class="command-card" data-search="windows cmd systeminfo os version patch uptime hardware">
+        <div class="command-header">
+          <code>systeminfo</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays Windows version, installed hotfixes, boot time, memory and basic hardware information.</p>
+      </article>
+    </section>
+
+    <!-- POWERSHELL -->
+    <section id="powershell" class="command-section">
+      <h2>PowerShell</h2>
+      <p class="section-description">PowerShell commands useful for Windows networking and administration.</p>
+
+      <article class="command-card" data-search="powershell get netipconfiguration ip address gateway dns adapter interface">
+        <div class="command-header">
+          <code>Get-NetIPConfiguration</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays IP address, default gateway and DNS configuration for network interfaces.</p>
+      </article>
+
+      <article class="command-card" data-search="powershell get netadapter network adapter status speed mac interface">
+        <div class="command-header">
+          <code>Get-NetAdapter</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Lists network adapters with status, link speed and MAC address information.</p>
+      </article>
+
+      <article class="command-card" data-search="powershell get netipaddress ip addresses ipv4 ipv6 interface">
+        <div class="command-header">
+          <code>Get-NetIPAddress</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Lists IPv4 and IPv6 addresses assigned to local interfaces.</p>
+      </article>
+
+      <article class="command-card" data-search="powershell get dnsclientserveraddress dns servers resolver interfaces">
+        <div class="command-header">
+          <code>Get-DnsClientServerAddress</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays DNS server addresses configured on network interfaces.</p>
+      </article>
+
+      <article class="command-card" data-search="powershell test netconnection ping tcp port connectivity traceroute">
+        <div class="command-header">
+          <code>Test-NetConnection example.com -Port 443</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Tests DNS resolution and TCP connectivity to a specific destination and port.</p>
+      </article>
+
+      <article class="command-card" data-search="powershell get netroute routing table routes next hop gateway">
+        <div class="command-header">
+          <code>Get-NetRoute</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays routes in the Windows networking stack.</p>
+      </article>
+
+      <article class="command-card" data-search="powershell get nettcpconnection tcp connections listening established ports">
+        <div class="command-header">
+          <code>Get-NetTCPConnection</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Lists TCP connections and listening sockets with local and remote addresses.</p>
+      </article>
+
+      <article class="command-card" data-search="powershell resolve dnsname dns lookup query hostname record a cname mx">
+        <div class="command-header">
+          <code>Resolve-DnsName example.com</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Performs a DNS query and returns detailed DNS record information.</p>
+      </article>
+    </section>
+
+    <!-- LINUX -->
+    <section id="linux" class="command-section">
+      <h2>Linux</h2>
+      <p class="section-description">Common Linux commands for interfaces, routing, sockets and network troubleshooting.</p>
+
+      <article class="command-card" data-search="linux ip addr address interfaces ipv4 ipv6 network adapter">
+        <div class="command-header">
+          <code>ip addr</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays network interfaces and their assigned IPv4 and IPv6 addresses.</p>
+      </article>
+
+      <article class="command-card" data-search="linux ip link interfaces mac mtu status up down">
+        <div class="command-header">
+          <code>ip link</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays Layer 2 interface information such as state, MAC address and MTU.</p>
+      </article>
+
+      <article class="command-card" data-search="linux ip route routing table default gateway routes next hop">
+        <div class="command-header">
+          <code>ip route</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays the kernel IPv4 routing table.</p>
+      </article>
+
+      <article class="command-card" data-search="linux ping icmp connectivity latency packet loss">
+        <div class="command-header">
+          <code>ping -c 4 8.8.8.8</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Sends four ICMP echo requests to test reachability, latency and packet loss.</p>
+      </article>
+
+      <article class="command-card" data-search="linux traceroute path hops routing trace">
+        <div class="command-header">
+          <code>traceroute 8.8.8.8</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Shows intermediate Layer 3 hops toward a destination.</p>
+      </article>
+
+      <article class="command-card" data-search="linux ss sockets tcp udp listening ports connections process">
+        <div class="command-header">
+          <code>ss -tulpn</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Lists listening TCP/UDP sockets and associated processes.</p>
+      </article>
+
+      <article class="command-card" data-search="linux dig dns lookup query records resolver">
+        <div class="command-header">
+          <code>dig example.com</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Performs a detailed DNS query for the specified domain.</p>
+      </article>
+
+      <article class="command-card" data-search="linux nslookup dns query hostname address">
+        <div class="command-header">
+          <code>nslookup example.com</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Queries DNS for hostname or IP address resolution.</p>
+      </article>
+
+      <article class="command-card" data-search="linux arp neighbor ip neigh mac address cache">
+        <div class="command-header">
+          <code>ip neigh</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Displays the neighbor table, the modern Linux equivalent of viewing the ARP cache.</p>
+      </article>
+
+      <article class="command-card" data-search="linux curl http https headers request test web api">
+        <div class="command-header">
+          <code>curl -I https://example.com</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Sends an HTTP HEAD request and displays response headers, useful for checking web connectivity.</p>
+      </article>
+    </section>
+
+    <!-- NETWORKING -->
+    <section id="networking" class="command-section">
+      <h2>Networking Reference</h2>
+      <p class="section-description">Quick references for ports, addressing and common troubleshooting concepts.</p>
+
+      <article class="command-card" data-search="networking ports ssh 22 tcp secure shell">
+        <div class="command-header">
+          <code>SSH — TCP/22</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Secure remote terminal access and command execution.</p>
+      </article>
+
+      <article class="command-card" data-search="networking ports telnet 23 tcp remote terminal insecure">
+        <div class="command-header">
+          <code>Telnet — TCP/23</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Legacy unencrypted remote terminal protocol. Avoid when SSH is available.</p>
+      </article>
+
+      <article class="command-card" data-search="networking ports dns 53 tcp udp domain name system">
+        <div class="command-header">
+          <code>DNS — UDP/TCP 53</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Resolves hostnames to IP addresses and transports DNS zone data.</p>
+      </article>
+
+      <article class="command-card" data-search="networking ports dhcp 67 68 udp address assignment">
+        <div class="command-header">
+          <code>DHCP — UDP/67, UDP/68</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Automatically assigns IP configuration to clients. Server uses port 67; client uses port 68.</p>
+      </article>
+
+      <article class="command-card" data-search="networking ports http 80 tcp web">
+        <div class="command-header">
+          <code>HTTP — TCP/80</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Standard unencrypted web traffic.</p>
+      </article>
+
+      <article class="command-card" data-search="networking ports https 443 tcp tls ssl secure web">
+        <div class="command-header">
+          <code>HTTPS — TCP/443</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>HTTP encrypted with TLS.</p>
+      </article>
+
+      <article class="command-card" data-search="networking ports snmp 161 162 udp monitoring traps">
+        <div class="command-header">
+          <code>SNMP — UDP/161, UDP/162</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>Used for network monitoring and management. Queries typically use 161; traps typically use 162.</p>
+      </article>
+
+      <article class="command-card" data-search="networking private ipv4 ranges rfc1918 10 172 192.168">
+        <div class="command-header">
+          <code>10.0.0.0/8
+172.16.0.0/12
+192.168.0.0/16</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>RFC 1918 private IPv4 address ranges used inside private networks.</p>
+      </article>
+
+      <article class="command-card" data-search="networking apipa link local 169.254 dhcp failure automatic private ip">
+        <div class="command-header">
+          <code>169.254.0.0/16</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>IPv4 link-local range. On Windows, an address from this range often indicates that DHCP failed.</p>
+      </article>
+
+      <article class="command-card" data-search="networking loopback localhost ipv4 127.0.0.1">
+        <div class="command-header">
+          <code>127.0.0.1</code>
+          <button class="copy-btn" type="button">Copy</button>
+        </div>
+        <p>IPv4 loopback address used to communicate with the local host.</p>
+      </article>
+    </section>
+
+    <div id="no-results" class="no-results" hidden>
+      No matching commands found.
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>NECS — Network Engineer's Cheat Sheet</p>
+  </footer>
+
+  <script>
+    const searchInput = document.getElementById('search');
+    const cards = [...document.querySelectorAll('.command-card')];
+    const sections = [...document.querySelectorAll('.command-section')];
+    const noResults = document.getElementById('no-results');
+    const resultCount = document.getElementById('result-count');
+
+    function normalize(value) {
+      return value.toLowerCase().trim();
+    }
+
+    function filterCommands() {
+      const query = normalize(searchInput.value);
+      let visibleCards = 0;
+
+      cards.forEach(card => {
+        const searchableText = normalize(
+          card.innerText + ' ' + (card.dataset.search || '')
+        );
+
+        const matches = !query || searchableText.includes(query);
+        card.hidden = !matches;
+
+        if (matches) visibleCards++;
+      });
+
+      sections.forEach(section => {
+        const visibleInSection = section.querySelectorAll('.command-card:not([hidden])').length;
+        section.hidden = query !== '' && visibleInSection === 0;
+
+        section.querySelectorAll('h3').forEach(heading => {
+          let sibling = heading.nextElementSibling;
+          let hasVisibleCard = false;
+
+          while (sibling && sibling.tagName !== 'H3') {
+            if (sibling.classList.contains('command-card') && !sibling.hidden) {
+              hasVisibleCard = true;
+              break;
+            }
+            sibling = sibling.nextElementSibling;
+          }
+
+          heading.hidden = query !== '' && !hasVisibleCard;
+        });
+      });
+
+      noResults.hidden = visibleCards !== 0 || query === '';
+      resultCount.textContent = query ? `${visibleCards} result${visibleCards === 1 ? '' : 's'}` : '';
+    }
+
+    searchInput.addEventListener('input', filterCommands);
+
+    document.querySelectorAll('.copy-btn').forEach(button => {
+      button.addEventListener('click', async () => {
+        const code = button.closest('.command-header').querySelector('code').innerText;
+
+        try {
+          await navigator.clipboard.writeText(code);
+          const previous = button.textContent;
+          button.textContent = 'Copied';
+          setTimeout(() => button.textContent = previous, 1200);
+        } catch {
+          button.textContent = 'Copy failed';
+          setTimeout(() => button.textContent = 'Copy', 1200);
+        }
+      });
+    });
+
+    document.querySelectorAll('a[href^="#"]').forEach(link => {
+      link.addEventListener('click', () => {
+        if (searchInput.value) {
+          searchInput.value = '';
+          filterCommands();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
